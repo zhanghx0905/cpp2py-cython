@@ -8,10 +8,11 @@ Point* getPoint(
     const int N, 
     const int* top, 
     const int* _board, 
-	const int lastX, 
+    const int lastX, 
     const int lastY, 
     const int noX, 
-    const int noY);
+    const int noY
+);
 ```
 
 And you want to call it in Python like this
@@ -60,11 +61,12 @@ options:
 
 ## Features
 
-- C litral macros are mapped to Python variables.
+- C literal macros are mapped to Python variables.
 - C/C++ enums are mapped to Python enums (enum.Enum).
 - C/C++ class/struct/union are mapped to Cython extension types.
-  - Single & Public inheritence
-  - Abstruct class
+  - Methods/Static Methods are wrapped, data members are mapped to Python property with getter and setter (if the field is mutable) 
+  - Single & Public inheritance
+  - Abstract class
   - Operator overloading
 - C/C++ functions are mapped to Cython cpdef functions.
   - default values (only number/string literals)
@@ -84,11 +86,11 @@ options:
 | Mapping/Iterable | std::vector, std::list, std::set, std::unordered_set, std::map, std::unordered_map, std::pair | set, list, dict, tuple         |
 | complex          | std::complex                                                 | complex                        |
 
-See [examples](./examples) and [testcases](./test/testcases) for more information.
-
-TODO: Add more details
-
+- Among the overloaded functions, only the **first wrappable** one will be forwarding. 
 - `const` qualifier will be ignored
+- `void*` can be handled once the underlying type is specified
+
+See [examples](./examples) and [testcases](./test/testcases) for more information.
 
 ### Unsupported
 
