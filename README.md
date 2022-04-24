@@ -68,6 +68,7 @@ options:
   - Operator overloading
 - C/C++ functions are mapped to Cython cpdef functions.
   - default values (only number/string literals)
+- Generate the corresponding Python stub file (.pyi)
 
 | Python type =>   | *C++ type*                                                   | => Python type                 |
 | :--------------- | :----------------------------------------------------------- | :----------------------------- |
