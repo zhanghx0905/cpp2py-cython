@@ -1,0 +1,54 @@
+import numpy
+from Cython.Build import cythonize
+from setuptools import Extension, setup
+
+extensions = [
+    Extension(
+        "{{ module }}",
+        [
+            "{{ module }}.pyx",
+{%- for filename in filenames %}
+            "{{ filename }}",
+{%- endfor %}
+        ],
+        include_dirs=[
+            "{{ sourcedir }}",
+            numpy.get_include(),
+{%- for incdir in incdirs %}
+            "{{ incdir }}",
+{%- endfor %}
+        ],
+        define_macros=[
+            ("NDEBUG",),
+            ],
+        extra_compile_args=[
+            "-std=c++11",
+{%- for compiler_flag in compiler_flags %}
+            "{{ compiler_flag }}",
+{%- endfor %}
+            # disable warnings caused by Cython using the deprecated
+            # NumPy C-API
+            "-Wno-cpp", "-Wno-unused-function"
+        ],
+        library_dirs=[
+        {%- for library_dir in library_dirs %}
+            "{{ library_dir }}",
+        {%- endfor %}
+        ],
+        libraries=[
+        {%- for library in libraries %}
+            "{{ library }}",
+        {%- endfor %}
+        ],
+        language="c++"
+    )
+]
+setup(
+    name="{{ module }}",
+    ext_modules=cythonize(extensions,
+                          language_level=3,
+                          compiler_directives={
+                              'c_string_type': 'str',
+                              'c_string_encoding': 'default'
+                          })
+)

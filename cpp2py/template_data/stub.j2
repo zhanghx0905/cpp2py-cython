@@ -1,0 +1,23 @@
+from __future__ import annotations
+
+from typing import Any, Iterable, Mapping
+from enum import Enum
+
+import numpy as np
+
+
+{% for constant in constants -%}
+{{ constant }}
+{% endfor -%}
+{% for enum in enums %}
+class {{ enum.name }}(Enum):
+{%- for constant in enum.constants %}
+    {{ constant.name }}: int
+{%- endfor %}
+{% endfor %}
+{% for function in functions %}
+{{ function }}
+{% endfor %}
+{% for class in classes %}
+{{ class }}
+{% endfor %}

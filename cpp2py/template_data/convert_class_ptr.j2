@@ -1,0 +1,4 @@
+cdef {{ name }} obj = {{ name }}.__new__({{ name }})
+obj.thisptr = <cpp.{{ name }} *>{{ cpp_call }}
+obj.owner = {{ copy }}
+return obj

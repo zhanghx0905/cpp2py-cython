@@ -1,0 +1,22 @@
+class {{ name }}:
+{%- if ctor %}
+    {{ ctor|indent(4) }}
+{%- else %}
+
+    def __init__(self): ...
+{%- endif %}
+{%- if fields -%}
+{% for field in fields %}
+    @property
+    {{ field["getter"]|indent(4) }}
+{% if "setter" in field %}
+    @{{ field["name"] }}.setter
+    {{ field["setter"]|indent(4) }}
+{% endif -%}
+{% endfor %}
+{%- endif -%}
+{%- if methods %}
+{% for method in methods %}
+    {{ method|indent(4) }}
+{% endfor %}
+{%- endif %}

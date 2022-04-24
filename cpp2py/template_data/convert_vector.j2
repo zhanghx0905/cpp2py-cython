@@ -1,0 +1,6 @@
+cdef {{ cpp_type_decl }} {{ cython_argname }}
+cdef cpp.{{ cpp_tname }} * {{ python_argname }}_ptr = NULL
+cdef {{ cpp_tname }} {{ python_argname }}_element
+for {{ python_argname }}_element in {{ python_argname }}:
+    {{ python_argname }}_ptr = <cpp.{{ cpp_tname }}*> {{ python_argname }}_element.thisptr
+    {{ cython_argname }}.push_back(deref({{ python_argname }}_ptr))

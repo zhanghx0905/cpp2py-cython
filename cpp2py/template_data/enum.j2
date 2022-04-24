@@ -1,0 +1,4 @@
+cpdef enum {{ enum.name }}:
+{%- for constant in enum.constants %}
+    {{ constant.name }} = {{ constant.value }}
+{%- endfor %}

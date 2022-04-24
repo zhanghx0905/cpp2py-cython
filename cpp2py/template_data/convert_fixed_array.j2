@@ -1,0 +1,6 @@
+if len({{ py_argname }}) != {{ size }}:
+    raise ValueError(f"Expected list of length {{ size }}, got { len({{ py_argname }}) }")
+cdef {{ ele_type }} {{ cpp_argname }}[{{ size }}]
+cdef unsigned int {{ py_argname }}_idx
+for {{ py_argname }}_idx in range({{ size }}):
+    {{ cpp_argname }}[{{ py_argname }}_idx] = {{ py_argname }}[{{ py_argname }}_idx]

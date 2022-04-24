@@ -1,0 +1,34 @@
+cdef class {{ name }}:
+    cdef cpp.{{ name }} * thisptr
+    cdef bool owner
+
+    def __cinit__(self):
+        self.thisptr = NULL
+        self.owner = True
+
+    def __dealloc__(self):
+        if self.owner and self.thisptr != NULL:
+            del self.thisptr
+            self.thisptr = NULL
+{%- if ctor %}
+    {{ ctor|indent(4) }}
+{%- else %}
+
+    def __init__({{ name }} self):
+        raise TypeError("Can't instantiate class {{ name }} for no available constructors.")
+{%- endif %}
+{%- if fields -%}
+{% for field in fields %}
+    @property
+    {{ field["getter"]|indent(4) }}
+{% if "setter" in field %}
+    @{{ field["name"] }}.setter
+    {{ field["setter"]|indent(4) }}
+{% endif -%}
+{% endfor %}
+{%- endif -%}
+{%- if methods %}
+{% for method in methods %}
+    {{ method|indent(4) }}
+{% endfor %}
+{%- endif %}
