@@ -31,9 +31,11 @@ class CXXType:
         return self.name
 
     @classmethod
-    def build(cls, type: Type, includes: Imports) -> CXXType:
+    def build(cls, type: Type, includes: Imports, cache: dict[str, CXXType]) -> CXXType:
         def recursive_build(type: Type):
             cppname = type.spelling
+            if cppname in cache:
+                return cache[cppname]
             includes.add_stl(cppname)
 
             kind = type.kind
@@ -64,7 +66,7 @@ class CXXType:
                 .replace(" &", "")
                 .replace(" &&", "")
             )
-            return cls(
+            ret = cls(
                 type=type,
                 kind=kind,
                 cppname=cppname,
@@ -75,5 +77,7 @@ class CXXType:
                 ele_type=ele_type,
                 template_args=template_args,
             )
+            cache[cppname] = ret
+            return ret
 
         return recursive_build(type)

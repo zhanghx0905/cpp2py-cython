@@ -73,12 +73,13 @@ class ClangParser:
         self.fmapper = headers_mapper
         self.objects = ParseResult()
         self.includes = includes
+        self.cxxtypes: dict[str, CXXType] = {}
 
     def get_filename(self, cur: Cursor):
         return self.fmapper[cur.location.file.name]
 
     def build_cxxtype(self, type: cindex.Type):
-        return CXXType.build(type, self.includes)
+        return CXXType.build(type, self.includes, self.cxxtypes)
 
     def parse(self):
         for ac in self.root_cursor.walk_preorder():
@@ -281,7 +282,7 @@ class ClangParser:
     def _parse_var_literal(expressions: list[cindex.Token]):
         # only support: literal/ unary_operator literal
         if len(expressions) not in [1, 2]:
-            return
+            return None
         l = expressions[-1]
         literal = parse_literal_cursor(l.cursor.kind, l.spelling)
         if len(expressions) == 1:
