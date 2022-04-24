@@ -86,9 +86,10 @@ options:
 | Mapping/Iterable | std::vector, std::list, std::set, std::unordered_set, std::map, std::unordered_map, std::pair | set, list, dict, tuple         |
 | complex          | std::complex                                                 | complex                        |
 
-- Among the overloaded functions, only the **first wrappable** one will be forwarding. 
-- `const` qualifier will be ignored
 - `void*` can be handled once the underlying type is specified
+- `const` and left reference `&` qualifier will be ignored
+- Only the **first wrappable** one of the overloaded functions will be forwarding.
+- Only one of the identifiers with the same name from different namespaces will be wrapped.
 
 See [examples](./examples) and [testcases](./test/testcases) for more information.
 
@@ -98,7 +99,7 @@ See [examples](./examples) and [testcases](./test/testcases) for more informatio
 - Anonymous enum/union/struct
 - C++ Smart pointer
 
-## Requirements
+## Install
 Ubuntu 20.04
 
 **Python 3.10 or newer**
