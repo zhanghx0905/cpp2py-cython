@@ -83,7 +83,7 @@ options:
 | class            | class/struct/union's pointer                                 | class                          |
 | class            | pointer of class/struct/union's pointer                      | ×                              |
 | str              | char *, std::string                                          | str                            |
-| List[str]        | char**                                                       | ×                              |
+| Iterable[str]    | char**                                                       | ×                              |
 | Mapping/Iterable | std::vector, std::list, std::set, std::unordered_set, std::map, std::unordered_map, std::pair (only with str or numeric types) | set, list, dict, tuple         |
 | complex          | std::complex                                                 | complex                        |
 
