@@ -1,10 +1,14 @@
 import numpy as np
 from scipy import sparse
 
-import wrapper
+try:
+    import spqr
+except ImportError:
+    import wrapper
 
-wrapper.build()
-import spqr
+    wrapper.build()
+    import spqr
+
 
 cholmod_sparse = spqr.cholmod_sparse_struct
 
@@ -20,9 +24,10 @@ def scipy_to_cholmod_sparse(mat: sparse.csc_matrix, view: cholmod_sparse):
     view.sorted = 1
     view.packed = 1
 
-    view.i = np.ascontiguousarray(mat.indices, np.int64)
-    view.p = np.ascontiguousarray(mat.indptr, np.int64)
-    view.x = np.ascontiguousarray(mat.data, np.float64)
+    view.i = i = np.ascontiguousarray(mat.indices, np.int64)
+    view.p = p = np.ascontiguousarray(mat.indptr, np.int64)
+    view.x = x = np.ascontiguousarray(mat.data, np.float64)
+    return mat, i, p, x
 
 
 def qr(mat: sparse.csc_matrix):
@@ -30,7 +35,7 @@ def qr(mat: sparse.csc_matrix):
     spqr.cholmod_l_start(cc)
 
     A = cholmod_sparse()
-    scipy_to_cholmod_sparse(mat, A)
+    _ref = scipy_to_cholmod_sparse(mat, A)
 
     Q = cholmod_sparse.__new__(cholmod_sparse)
     R = cholmod_sparse.__new__(cholmod_sparse)
