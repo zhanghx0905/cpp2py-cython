@@ -20,13 +20,9 @@ def scipy_to_cholmod_sparse(mat: sparse.csc_matrix, view: cholmod_sparse):
     view.sorted = 1
     view.packed = 1
 
-    i = np.ascontiguousarray(mat.indices, np.int64)
-    p = np.ascontiguousarray(mat.indptr, np.int64)
-    x = np.ascontiguousarray(mat.data, np.float64)
-    view.i = i
-    view.p = p
-    view.x = x
-    return i, p, x
+    view.i = np.ascontiguousarray(mat.indices, np.int64)
+    view.p = np.ascontiguousarray(mat.indptr, np.int64)
+    view.x = np.ascontiguousarray(mat.data, np.float64)
 
 
 def qr(mat: sparse.csc_matrix):

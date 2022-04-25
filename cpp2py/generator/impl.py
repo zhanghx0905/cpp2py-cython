@@ -11,7 +11,9 @@ class BaseImplGenerator:
         self.classes = process_ret.classes
         self.functions = process_ret.functions
 
-    def _generate_func_class(self, getter: Callable[[object], str]):
+    def _generate_func_class(
+        self, getter: Callable[[object], str], class_template: str
+    ):
         functions = [getter(func.generator) for func in self.functions]
 
         classes = []
@@ -33,7 +35,7 @@ class BaseImplGenerator:
 
             classes.append(
                 render(
-                    "class",
+                    class_template,
                     ctor=ctor,
                     methods=methods,
                     fields=fields,
@@ -48,7 +50,7 @@ class ImplGenerator(BaseImplGenerator):
         constants = [f"{macro.name} = cpp.{macro.name}" for macro in self.macros]
         enums = [render("enum", enum=enum) for enum in self.enums]
         functions, classes = super()._generate_func_class(
-            lambda generator: getattr(generator, "impl")
+            lambda generator: getattr(generator, "impl"), "class"
         )
         return render(
             "definitions",

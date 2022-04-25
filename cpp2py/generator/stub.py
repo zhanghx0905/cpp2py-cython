@@ -12,7 +12,7 @@ class StubGenerator(BaseImplGenerator):
             f"{macro.name}: {catch_type(macro.literal)}" for macro in self.macros
         ]
         functions, classes = functions, classes = super()._generate_func_class(
-            lambda generator: getattr(generator, "pysign")
+            lambda generator: getattr(generator, "pysign"), "class_stub"
         )
         return render(
             "stub",
