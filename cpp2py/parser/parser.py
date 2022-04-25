@@ -335,5 +335,6 @@ def parse(paths: list[str], include_paths: list[str], encoding: str, includes: I
     )
     _check_diagnostics(root.diagnostics)
 
-    ret = ClangParser(root.cursor, headers_mapper, includes).parse()
+    parser = ClangParser(root.cursor, headers_mapper, includes)
+    ret = parser.parse()
     return ret

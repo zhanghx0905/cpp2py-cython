@@ -166,6 +166,37 @@ class StringConverter(CStringConverter):
         return self.cxxtype.plain_name == "basic_string[char]"
 
 
+class CStringArrayConverter(BaseTypeConverter):
+    def _matches(self) -> bool:
+        return (
+            self.cxxtype.kind == TypeKind.POINTER
+            and self.cxxtype.pointee.kind == TypeKind.POINTER
+            and self.cxxtype.pointee.pointee.kind == TypeKind.CHAR_S
+        )
+
+    def _add_includes(self, includes):
+        includes.mods["malloc"] = True
+
+    def python_to_cpp(self):
+        return f"""cdef char** {self.cpp_argname} = <char **>malloc(sizeof(char *)*len({self.py_argname}))
+cdef unsigned int {self.py_argname}_idx
+for {self.py_argname}_idx in range(len({self.py_argname})):
+    {self.cpp_argname}[{self.py_argname}_idx] = {self.py_argname}[{self.py_argname}_idx]
+"""
+
+    def input_type_decl(self):
+        return "object"
+
+    def cpp_call_arg(self):
+        return self.cpp_argname
+
+    def pysign_type_decl(self, vtype: VarType):
+        return "Iterable[str]"
+
+    def return_output(self, cpp_call: str, **kwargs) -> str:
+        raise NotImplementedError
+
+
 class FixedSizeArrayConverter(BaseTypeConverter):
     def _matches(self):
         if self.cxxtype.kind == TypeKind.CONSTANTARRAY:
@@ -346,17 +377,11 @@ class STLConverter(BaseTypeConverter):
         match = _SUPPORTED_STL_PATTERN.match(self.cxxtype.cppname)
         if match is not None:
             self.stl = match.group(1)
-
-            self.impl_name = self.cxxtype.plain_name
             typenames = {
                 m.group(0)
                 for m in _IDENTIFIER_PATTERN.finditer(self.cxxtype.plain_name)
             }
-            for typename in typenames:
-                if typename in self.classnames:
-                    self.impl_name = self.impl_name.replace(typename, f"cpp.{typename}")
-
-            return True
+            return all(typename not in self.classnames for typename in typenames)
         return False
 
     def input_type_decl(self):
@@ -368,10 +393,12 @@ class STLConverter(BaseTypeConverter):
 
 class ClassVectorConverter(STLConverter):
     def _matches(self):
-        if super()._matches() and self.stl == "vector":
+        match = _SUPPORTED_STL_PATTERN.match(self.cxxtype.cppname)
+        if match is not None and match.group(1) == "vector":
             subtype = self.cxxtype.template_args[0]
             if subtype.plain_name in self.classnames:
                 self.subtype = subtype
+                self.impl_name = f"vector[cpp.{subtype.plain_name}]"
                 return True
         return False
 
@@ -404,6 +431,7 @@ DEFAULT_CONVERTERS: list[type] = [
     CStringConverter,
     NumericConverter,
     NumericPtrConverter,
+    CStringArrayConverter,
     FixedSizeArrayConverter,
     EnumConverter,
     ClassConverter,

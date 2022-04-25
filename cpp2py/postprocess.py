@@ -91,14 +91,19 @@ class Postprocessor:
             chains.reverse()
 
             base_methods = chains[0].methods
-
+            base_fields = chains[0].fields
             for class_ in chains[1:]:
-                for method_name in base_methods:
+                for method_name, methods in base_methods.items():
                     if method_name not in class_.methods.keys():
                         # copy the method from base to subclass
-                        added = base_methods[method_name][0]
-                        class_.methods[method_name].append(added)
+                        class_.methods[method_name].extend(methods)
+                class_fields = {field.name for field in class_.fields}
+                for field in base_fields:
+                    if field.name not in class_fields:
+                        class_.fields.append(field)
+
                 base_methods = class_.methods
+                base_fields = class_.fields
 
         for leaf_name in leaf_names:
             _copy_base_methods(class_dict[leaf_name])

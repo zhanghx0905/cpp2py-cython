@@ -55,7 +55,7 @@ class DeclGenerator:
             for method in chain(*class_.methods.values()):
                 mgen = METHOD_DECL % {**method.__dict__, "args": _gen_args_decl(method)}
                 if method.is_static:
-                    mgen = "@staticmethod" + os.linesep + mgen
+                    mgen = f"@staticmethod{os.linesep}{mgen}"
                 methods.append(mgen)
 
             class_decl = {

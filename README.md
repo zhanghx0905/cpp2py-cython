@@ -83,7 +83,8 @@ options:
 | class            | class/struct/union's pointer                                 | class                          |
 | class            | pointer of class/struct/union's pointer                      | ×                              |
 | str              | char *, std::string                                          | str                            |
-| Mapping/Iterable | std::vector, std::list, std::set, std::unordered_set, std::map, std::unordered_map, std::pair | set, list, dict, tuple         |
+| List[str]        | char**                                                       | ×                              |
+| Mapping/Iterable | std::vector, std::list, std::set, std::unordered_set, std::map, std::unordered_map, std::pair (only with str or numeric types) | set, list, dict, tuple         |
 | complex          | std::complex                                                 | complex                        |
 
 - `void*` can be handled once the underlying type is specified
@@ -96,8 +97,9 @@ See [examples](./examples) and [testcases](./test/testcases) for more informatio
 ### Unsupported
 
 - C++ Template
-- Anonymous enum/union/struct
 - C++ Smart pointer
+- Anonymous enum/union/struct
+- C function pointer
 
 ## Install
 Ubuntu 20.04
