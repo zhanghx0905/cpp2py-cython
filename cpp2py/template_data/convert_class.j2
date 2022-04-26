@@ -1,5 +1,4 @@
 # Noted that a copy of object is returned
 cdef {{ name }} obj = {{ name }}.__new__({{ name }})
-obj.thisptr = <cpp.{{ name }} *>malloc(sizeof(cpp.{{ name }}))  
-obj.thisptr[0] = <cpp.{{ name }}>{{ cpp_call }}
+obj.thisptr = make_shared[cpp.{{ name }}](<cpp.{{ name }}>{{ cpp_call }})  
 return obj

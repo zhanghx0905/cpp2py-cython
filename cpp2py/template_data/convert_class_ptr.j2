@@ -1,4 +1,3 @@
 cdef {{ name }} obj = {{ name }}.__new__({{ name }})
-obj.thisptr = <cpp.{{ name }} *>{{ cpp_call }}
-obj.owner = {{ copy }}
+obj.thisptr = shared_ptr[cpp.{{ name }}](<cpp.{{ name }} *>{{ cpp_call }})
 return obj

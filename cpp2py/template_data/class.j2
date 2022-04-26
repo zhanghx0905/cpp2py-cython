@@ -1,15 +1,6 @@
 cdef class {{ name }}:
-    cdef cpp.{{ name }} * thisptr
-    cdef bool owner
+    cdef shared_ptr[cpp.{{ name }}] thisptr
 
-    def __cinit__(self):
-        self.thisptr = NULL
-        self.owner = True
-
-    def __dealloc__(self):
-        if self.owner and self.thisptr != NULL:
-            del self.thisptr
-            self.thisptr = NULL
 {%- if ctor %}
     {{ ctor|indent(4) }}
 {%- else %}

@@ -54,7 +54,7 @@ _STL_MODES_DECL = {
     "unordered_set": "from libcpp.unordered_set cimport unordered_set",
     "complex": "from libcpp.complex cimport complex",
     "unique_ptr": "from libcpp.memory cimport unique_ptr",
-    "shared_ptr": "from libcpp.memory cimport shared_ptr",
+    "shared_ptr": "from libcpp.memory cimport make_shared, shared_ptr",
 }
 
 _OTHER_MODS_DECL = {
@@ -73,6 +73,9 @@ class Imports:
         self.config = config
         self.mods = {mod: False for mod in _OTHER_MODS_DECL}
         self.stl = {container: False for container in _STL_MODES_DECL}
+
+        self.stl['shared_ptr'] = True
+        self.mods['deref'] = True
 
     def add_stl(self, tname: str):
         for match in _STL_PATTERN.finditer(tname):

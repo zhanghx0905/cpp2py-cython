@@ -316,7 +316,7 @@ class ClassPtrConverter(BaseTypeConverter):
         )
 
     def cpp_call_arg(self):
-        return f"{self.py_argname}.thisptr"
+        return f"{self.py_argname}.thisptr.get()"
 
     def return_output(self, cpp_call: str, **kwargs) -> str:
         return render(
@@ -344,7 +344,7 @@ class ClassPtrPtrConverter(BaseTypeConverter):
         return False
 
     def cpp_call_arg(self):
-        return f"&{self.py_argname}.thisptr"
+        return f"&{self.py_argname}.thisptr.get()"
 
     def input_type_decl(self):
         return self.pointee.plain_name

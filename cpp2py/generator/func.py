@@ -8,11 +8,11 @@ from ..utils import camel_to_snake, render
 
 # member definitions
 FUNC_CALL = "cpp.%(name)s(%(call_args)s)"
-CONSTRUCTOR_CALL = "self.thisptr = new cpp.%(class_name)s(%(call_args)s)"
-METHOD_CALL = "self.thisptr.%(name)s(%(call_args)s)"
+CONSTRUCTOR_CALL = "self.thisptr.reset(new cpp.%(class_name)s(%(call_args)s))"
+METHOD_CALL = "deref(self.thisptr).%(name)s(%(call_args)s)"
 STATIC_METHOD_CALL = "cpp.%(class_name)s.%(name)s(%(call_args)s)"
-SETTER_CALL = "self.thisptr.%(name)s = %(call_args)s"
-GETTER_CALL = "self.thisptr.%(name)s"
+SETTER_CALL = "deref(self.thisptr).%(name)s = %(call_args)s"
+GETTER_CALL = "deref(self.thisptr).%(name)s"
 PYSIGN = "def %(name)s(%(args)s) -> %(ret_type)s: ..."
 _VOID = object()
 
