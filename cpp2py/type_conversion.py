@@ -1,6 +1,7 @@
 import re
 from abc import ABCMeta, abstractmethod
 from enum import Enum
+from typing import List, Set
 
 from clang.cindex import TypeKind
 
@@ -28,7 +29,7 @@ class AbstractTypeConverter(metaclass=ABCMeta):
         self,
         type: CXXType,
         argname: str,
-        classnames: set[str],
+        classnames: Set[str],
         includes: Imports,
     ):
         self.classnames = classnames
@@ -202,7 +203,7 @@ class FixedSizeArrayConverter(BaseTypeConverter):
         if self.cxxtype.kind == TypeKind.CONSTANTARRAY:
             self.size = self.cxxtype.type.element_count
             self.ele_type = self.cxxtype.ele_type
-            return True
+            return self.ele_type.plain_name not in self.classnames
         return False
 
     def python_to_cpp(self):
@@ -426,7 +427,7 @@ class ClassVectorConverter(STLConverter):
         raise NotImplementedError()
 
 
-DEFAULT_CONVERTERS: list[type] = [
+DEFAULT_CONVERTERS: List[type] = [
     VoidConverter,
     CStringConverter,
     NumericConverter,
@@ -444,13 +445,13 @@ DEFAULT_CONVERTERS: list[type] = [
 CONVERTERS = DEFAULT_CONVERTERS
 
 
-def init_converters(custom_converters: list[type]):
+def init_converters(custom_converters: List[type]):
     global CONVERTERS
     CONVERTERS = custom_converters + DEFAULT_CONVERTERS
 
 
 def create_type_converter(
-    type: CXXType, argname: str, classnames: set[str], includes: Imports
+    type: CXXType, argname: str, classnames: Set[str], includes: Imports
 ) -> AbstractTypeConverter:
     for converter_type in CONVERTERS:
         converter: AbstractTypeConverter = converter_type(

@@ -1,7 +1,7 @@
 import warnings
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Callable
+from typing import Callable, List, Optional
 
 from .config import Imports
 from .generator.func import (
@@ -25,27 +25,27 @@ class BindedFunc:
 class BindedField:
     field: Variable
     getter: GetterGenerator
-    setter: SetterGenerator | None = None
+    setter: Optional[SetterGenerator] = None
 
 
 @dataclass
 class BindedClass:
     name: str
-    ctor: BindedFunc | None = None
-    methods: list[BindedFunc] = field(default_factory=list)
-    fields: list[BindedField] = field(default_factory=list)
+    ctor: Optional[BindedFunc] = None
+    methods: List[BindedFunc] = field(default_factory=list)
+    fields: List[BindedField] = field(default_factory=list)
 
 
 @dataclass
 class ProcessOutput:
     objects: ParseResult
-    classes: list[BindedClass] = field(default_factory=list)
+    classes: List[BindedClass] = field(default_factory=list)
     # functions remove overloaded
-    functions: list[BindedFunc] = field(default_factory=list)
+    functions: List[BindedFunc] = field(default_factory=list)
 
 
 def _bind_overloaded_functions(
-    funcs: list[Function], generator_builder: Callable[..., FunctionGenerator]
+    funcs: List[Function], generator_builder: Callable[..., FunctionGenerator]
 ):
     for idx, func in enumerate(funcs):
         try:
@@ -83,7 +83,7 @@ class Postprocessor:
 
         def _copy_base_methods(leaf_class: Class):
             base = leaf_class.base
-            chains: list[Class] = [leaf_class]
+            chains: List[Class] = [leaf_class]
             while base is not None and base in class_dict:
                 class_ = class_dict[base]
                 chains.append(class_)

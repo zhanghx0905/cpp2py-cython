@@ -1,5 +1,6 @@
 import os
 import re
+from typing import List, Set
 
 from ..config import Imports
 from ..parser import CXXType, Variable
@@ -39,9 +40,9 @@ class FunctionGenerator(metaclass=PostInitMeta):
     def __init__(
         self,
         name: str,
-        args: list[Variable],
+        args: List[Variable],
         ret_type: CXXType,
-        typenames: set[str],
+        typenames: Set[str],
         includes: Imports,
     ) -> None:
         def get_converter(type: CXXType, py_argname: str):
@@ -129,9 +130,9 @@ class MethodGenerator(FunctionGenerator):
     def __init__(
         self,
         name: str,
-        args: list[Variable],
+        args: List[Variable],
         ret_type: CXXType,
-        typenames: set[str],
+        typenames: Set[str],
         includes: Imports,
         class_name: str,
     ) -> None:
@@ -185,8 +186,8 @@ class StaticMethodGenerator(MethodGenerator):
 class ConstructorGenerator(MethodGenerator):
     def __init__(
         self,
-        args: list[Variable],
-        typenames: set[str],
+        args: List[Variable],
+        typenames: Set[str],
         includes: Imports,
         class_name: str,
     ) -> None:
@@ -207,7 +208,7 @@ class GetterGenerator(MethodGenerator):
         self,
         field_name: str,
         field_type: CXXType,
-        typenames: set[str],
+        typenames: Set[str],
         includes: Imports,
         class_name: str,
     ) -> None:
@@ -228,7 +229,7 @@ class SetterGenerator(MethodGenerator):
         self,
         field_name: str,
         field_type: CXXType,
-        typenames: set[str],
+        typenames: Set[str],
         includes: Imports,
         class_name: str,
     ) -> None:

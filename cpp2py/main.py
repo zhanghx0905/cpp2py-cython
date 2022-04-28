@@ -1,8 +1,9 @@
 import os
 from dataclasses import dataclass
 from itertools import chain
+from typing import List, Optional
 
-import autopep8
+from black import format_str, mode
 
 from .config import Config, Imports
 from .generator import DeclGenerator, ImplGenerator, StubGenerator
@@ -21,14 +22,16 @@ class WrapperResult:
     setup_content: str
     setup_name: str
 
-    stub_content: str = ""
-    stub_name: str | None = None
+    stub_content: Optional[str] = None
+    stub_name: Optional[str] = None
 
     def __post_init__(self):
-        self.header_content = autopep8.fix_code(self.header_content)
-        self.source_content = autopep8.fix_code(self.source_content)
+        # self.header_content = autopep8.fix_code(self.header_content)
+        # self.source_content = autopep8.fix_code(self.source_content)
         if self.stub_name is not None:
-            self.stub_content = autopep8.fix_code(self.stub_content)
+            self.stub_content = format_str(
+                self.setup_content, mode=mode.Mode(is_pyi=True)
+            )
 
     def __iter__(self):
         yield self.header_name, self.header_content
@@ -38,7 +41,7 @@ class WrapperResult:
             yield self.stub_name, self.stub_content
 
 
-def _derive_modname(headers: list[str]):
+def _derive_modname(headers: List[str]):
     name = headers[0].split(os.sep)[-1].split(".")[0]
     if len(headers) != 1 or name == "":
         raise ValueError("Can not determine valid module name")

@@ -2,10 +2,12 @@ import os
 import re
 from itertools import count
 from warnings import warn
+from typing import Dict, List
 
 from clang import cindex
 from clang.cindex import Cursor, CursorKind
 from more_itertools import ilen, last, partition, split_at
+
 
 from ..config import Imports
 from ..cxxtypes import CXXType
@@ -37,7 +39,7 @@ class ClangError(Exception):
         super().__init__(os.linesep.join(str(diag) for diag in diags))
 
 
-def _check_diagnostics(diagnostics: list[cindex.Diagnostic]):
+def _check_diagnostics(diagnostics: List[cindex.Diagnostic]):
     critical, non_critical = partition(
         lambda d: d.severity <= cindex.Diagnostic.Warning,
         diagnostics,
@@ -67,13 +69,13 @@ def set_when_missing(dic: dict, symbol):
 
 class ClangParser:
     def __init__(
-        self, cursor: Cursor, headers_mapper: dict[str, str], includes: Imports
+        self, cursor: Cursor, headers_mapper: Dict[str, str], includes: Imports
     ):
         self.root_cursor = cursor
         self.fmapper = headers_mapper
         self.objects = ParseResult()
         self.includes = includes
-        self.cxxtypes: dict[str, CXXType] = {}
+        self.cxxtypes: Dict[str, CXXType] = {}
 
     def get_filename(self, cur: Cursor):
         return self.fmapper[cur.location.file.name]
@@ -279,7 +281,7 @@ class ClangParser:
         class_.ctors.append(func)
 
     @staticmethod
-    def _parse_var_literal(expressions: list[cindex.Token]):
+    def _parse_var_literal(expressions: List[cindex.Token]):
         # only support: literal/ unary_operator literal
         if len(expressions) not in [1, 2]:
             return None
@@ -287,7 +289,7 @@ class ClangParser:
         literal = parse_literal_cursor(l.cursor.kind, l.spelling)
         if len(expressions) == 1:
             return literal
-        if len(expressions) == 2 and isinstance(literal, int | float):
+        if len(expressions) == 2 and isinstance(literal, (int, float)):
             unary_op = unary_operators(expressions[0].spelling)
             return unary_op(literal)
         return None
@@ -303,7 +305,7 @@ class ClangParser:
         set_when_missing(self.objects.macros, m)
 
 
-def parse(paths: list[str], include_paths: list[str], encoding: str, includes: Imports):
+def parse(paths: List[str], include_paths: List[str], encoding: str, includes: Imports):
 
     args = [
         "-Wno-pragma-once-outside-header",

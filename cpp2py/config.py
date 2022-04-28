@@ -1,16 +1,16 @@
 import os
 import re
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Callable, List, Optional
 
 
 @dataclass
 class Config:
-    headers: list[str] = field(default_factory=list)
-    modulename: str | None = None
+    headers: List[str] = field(default_factory=list)
+    modulename: Optional[str] = None
     target: str = "."
-    sources: list[str] = field(default_factory=list)
-    incdirs: list[str] = field(default_factory=list)
+    sources: List[str] = field(default_factory=list)
+    incdirs: List[str] = field(default_factory=list)
     compiler_flags: tuple = ("-O3",)
     encoding: str = "utf8"
     verbose: int = 0
@@ -21,11 +21,11 @@ class Config:
     setup_filename: str = "setup"
 
     before_build_handlers: Callable[..., None] = lambda: None
-    registered_converters: list[type] = field(default_factory=list)
-    additional_declarations: list[str] = field(default_factory=list)
+    registered_converters: List[type] = field(default_factory=list)
+    additional_declarations: List[str] = field(default_factory=list)
 
-    libraries: list[str] = field(default_factory=list)
-    library_dirs: list[str] = field(default_factory=list)
+    libraries: List[str] = field(default_factory=list)
+    library_dirs: List[str] = field(default_factory=list)
 
     def add_declaration(self, decl: str):
         self.additional_declarations.append(decl)

@@ -2,11 +2,11 @@ import glob
 import os
 import sys
 from functools import wraps
-from typing import List
+from typing import List, Optional
 
 import pytest
 from cpp2py import Config
-from cpp2py.main import run_setup, write_files, make_wrapper
+from cpp2py.main import make_wrapper, run_setup, write_files
 
 TESTCASES_PATH = os.path.join(os.path.dirname(__file__), "testcases")
 sys.path.insert(0, os.getcwd())
@@ -38,7 +38,7 @@ def cpp2py_tester(
     incdirs=None,
     cleanup=True,
     warnmsg=None,
-    config: Config | None = None,
+    config: Optional[Config] = None,
 ):
     def inner(func):
         @wraps(func)
@@ -56,7 +56,7 @@ def cpp2py_tester(
                     "incdirs": full_path(incdirs),
                     "compiler_flags": ("-O0",),
                     "setup_filename": SETUPPY_NAME,
-                    "generate_stub": False,  # True,
+                    "generate_stub": not False,  # True,
                 }
             )
             _config = Config(**args)

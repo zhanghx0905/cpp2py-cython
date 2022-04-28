@@ -104,10 +104,10 @@ See [examples](./examples) and [testcases](./test/testcases) for more informatio
 ## Install
 Ubuntu 20.04
 
-**Python 3.10 or newer**
+**Python 3.8 or newer**
 
 ```shell
-sudo apt install libclang-12-dev
+sudo apt install libclang-12-dev g++ python3.8-dev
 pip install -r requirement.txt
 python setup.py install
 ```

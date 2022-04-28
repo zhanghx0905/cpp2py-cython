@@ -3,7 +3,8 @@ from .impl import BaseImplGenerator
 
 
 def catch_type(literal: object):
-    return str(type(literal)).removeprefix("<class '").removesuffix("'>")
+    # .removeprefix("<class '").removesuffix("'>")
+    return str(type(literal))[8:-2]
 
 
 class StubGenerator(BaseImplGenerator):
