@@ -1,10 +1,8 @@
-struct A
-{
+struct A {
     int a;
 };
 
-struct B
-{
+struct B {
     A* a;
     A b;
 };

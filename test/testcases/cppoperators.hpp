@@ -1,55 +1,31 @@
-class Operators
-{
+class Operators {
 public:
     int v;
     bool b;
 
-    Operators() : v(0), b(false) {}
-
-    int operator()(int a)
+    Operators()
+        : v(0)
+        , b(false)
     {
-        return 2 * a;
     }
 
-    int operator[](int a)
-    {
-        return a;
-    }
+    int operator()(int a) { return 2 * a; }
 
-    int operator+(int a)
-    {
-        return 5 + a;
-    }
+    int operator[](int a) { return a; }
 
-    int operator-(int a)
-    {
-        return 5 - a;
-    }
+    int operator+(int a) { return 5 + a; }
 
-    int operator*(int a)
-    {
-        return 5 * a;
-    }
+    int operator-(int a) { return 5 - a; }
 
-    int operator/(int a)
-    {
-        return 5 / a;
-    }
+    int operator*(int a) { return 5 * a; }
 
-    int operator%(int a)
-    {
-        return 5 % a;
-    }
+    int operator/(int a) { return 5 / a; }
 
-    bool operator&&(bool b)
-    {
-        return true && b;
-    }
+    int operator%(int a) { return 5 % a; }
 
-    bool operator||(bool b)
-    {
-        return false || b;
-    }
+    bool operator&&(bool b) { return true && b; }
+
+    bool operator||(bool b) { return false || b; }
 
     Operators& operator+=(int a)
     {

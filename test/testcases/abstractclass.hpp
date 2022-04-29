@@ -1,26 +1,26 @@
-class AbstractClass
-{
+class AbstractClass {
 protected:
-    AbstractClass() {}
+    AbstractClass() { }
+
 public:
-    virtual ~AbstractClass() {}
+    virtual ~AbstractClass() { }
     virtual double square() = 0;
     virtual AbstractClass* clone() = 0;
 };
 
-class DerivedClass : public AbstractClass
-{
+class DerivedClass : public AbstractClass {
     double d;
+    int a;
+
 public:
-    DerivedClass(double d) : d(d) {}
-
-    virtual double square()
+    DerivedClass(double d, int a = -1)
+        : d(d)
+        , a(a)
     {
-        return d * d;
     }
 
-    virtual AbstractClass* clone()
-    {
-        return new DerivedClass(d);
-    }
+    virtual double square() { return d * d; }
+    virtual double product() { return a * d; }
+
+    virtual AbstractClass* clone() { return new DerivedClass(d); }
 };

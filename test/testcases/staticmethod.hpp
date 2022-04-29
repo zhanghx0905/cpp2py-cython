@@ -1,22 +1,13 @@
-class A
-{
+class A {
 public:
-    static int plus1(int a)
-    {
-        return a + 1;
-    }
+    static int plus1(int a) { return a + 1; }
 };
 
-namespace MyNamespace
-{
+namespace MyNamespace {
 
-class B
-{
+class B {
 public:
-    static int plus2(int a)
-    {
-        return a + 2;
-    }
+    static int plus2(int a) { return a + 2; }
 };
 
-}
+} // namespace MyNamespace

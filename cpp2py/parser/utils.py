@@ -1,7 +1,8 @@
 import operator
 import re
-from functools import lru_cache
 from ast import literal_eval
+from functools import lru_cache
+from typing import Any, Callable, Dict, Union
 
 from clang.cindex import CursorKind
 
@@ -62,7 +63,7 @@ def parse_literal_digit(literal: str):
     return None
 
 
-_LITERAL_HANDLERS = {
+_LITERAL_HANDLERS: Dict[CursorKind, Callable[[str], Any]] = {
     CursorKind.INTEGER_LITERAL: parse_literal_digit,
     CursorKind.FLOATING_LITERAL: parse_literal_digit,
     CursorKind.CHARACTER_LITERAL: ord,
@@ -74,5 +75,5 @@ _LITERAL_HANDLERS = {
 
 def parse_literal_cursor(
     cursor_kind: CursorKind, literal: str
-) -> int | float | str | bool | None:
+) -> Union[int, float, str, bool, None]:
     return _LITERAL_HANDLERS.get(cursor_kind, lambda _: None)(literal)

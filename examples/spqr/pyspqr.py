@@ -56,8 +56,6 @@ def permutation_vector_to_matrix(E):
 
 
 if __name__ == "__main__":
-    # Q, R, E, rank = qr( scipy.sparse.identity(10) )
-
     print("Testing qr()")
     for _ in range(10):
         M = sparse.rand(10, 8, density=0.1)

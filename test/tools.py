@@ -56,7 +56,7 @@ def cpp2py_tester(
                     "incdirs": full_path(incdirs),
                     "compiler_flags": ("-O0",),
                     "setup_filename": SETUPPY_NAME,
-                    "generate_stub": not False,  # True,
+                    "generate_stub": False,  # True,
                 }
             )
             _config = Config(**args)

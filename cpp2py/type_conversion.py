@@ -74,7 +74,7 @@ class AbstractTypeConverter(metaclass=ABCMeta):
 
 class BaseTypeConverter(AbstractTypeConverter):
     def __init__(
-        self, type: CXXType, argname: str, classnames: set[str], includes: Imports
+        self, type: CXXType, argname: str, classnames: Set[str], includes: Imports
     ):
         if type.kind in {TypeKind.LVALUEREFERENCE, TypeKind.RVALUEREFERENCE}:
             type = type.pointee

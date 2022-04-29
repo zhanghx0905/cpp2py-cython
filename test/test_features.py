@@ -1,30 +1,50 @@
+import numpy as np
+import pytest
+from cpp2py import Config, VoidPtrConverter
+from cpp2py.parser.parser_types import Enum
+
 from tools import cpp2py_tester
 
 
-@cpp2py_tester("namespaces.hpp")
-def test_namespaces():
-    from namespaces import ClassA, ClassB
+@cpp2py_tester(["deppart1.hpp", "deppart2.hpp"], modulename="depcombined")
+def test_dependent_parts():
+    from depcombined import A
+
+    a = A()
+    b = a.make()
+    assert b.get_value() == 5
 
 
-@cpp2py_tester("constructorargs.hpp")
-def test_constructor_args():
-    from constructorargs import A
+def test_voidptr():
+    class LongConverter(VoidPtrConverter):
+        def real_type(self) -> str:
+            return "long"
 
-    a = A(11, 7)
-    assert 18 == a.sum()
+    @cpp2py_tester("voidptr.hpp", config=Config(registered_converters=[LongConverter]))
+    def run():
+        from voidptr import A
+
+        arr = np.array([2], dtype=np.int64)
+        A().add_one(arr)
+        assert arr[0] == 3
+
+    run()
 
 
-@cpp2py_tester("function.hpp")
-def test_function():
-    from function import fun1, fun2
+@cpp2py_tester("abstractclass.hpp")
+def test_abstract_class():
+    from abstractclass import AbstractClass, DerivedClass
 
-    assert fun1(0) == 0
-    assert fun2() == 1
+    with pytest.raises(TypeError):
+        AbstractClass()
+    d = DerivedClass(5.0)
+    a = d.clone()
+    assert a.square() == 25.0
 
 
-@cpp2py_tester("mystruct.hpp")
+@cpp2py_tester("cppstruct.hpp")
 def test_struct():
-    from mystruct import A, B, print_mystruct_a, print_mystruct_b
+    from cppstruct import A, B, print_mystruct_a, print_mystruct_b
 
     a = A()
     a.a = 5
@@ -36,24 +56,6 @@ def test_struct():
     b.a = 10
     assert b.a == 10
     assert print_mystruct_b(b) == "a = 10"
-
-
-@cpp2py_tester("vectorofstruct.hpp")
-def test_vector_of_struct():
-    from vectorofstruct import MyStruct, sum_of_activated_entries
-
-    def make_struct(value, active):
-        res = MyStruct()
-        res.value = value
-        res.active = active
-        return res
-
-    a = make_struct(5, False)
-    b = make_struct(10, True)
-    entries = [a, b]
-    assert sum_of_activated_entries(entries) == 10
-    a.active = True
-    assert sum_of_activated_entries(entries) == 15
 
 
 @cpp2py_tester("cppoperators.hpp")
@@ -87,15 +89,9 @@ def test_operators():
 
 @cpp2py_tester("typedef.hpp")
 def test_typedef():
-    from typedef import fun, Student, Stu1
+    from typedef import fun
 
     assert fun(1.0) == 2.0
-    stu = Student()
-    stu.a = 10
-    assert stu.a == 10
-    stu = Stu1()
-    stu.a = 10
-    assert stu.a == 10
 
 
 @cpp2py_tester("complexfield.hpp")
@@ -113,18 +109,13 @@ def test_complex_field():
 
 @cpp2py_tester("cppenum.hpp")
 def test_enum():
-    from cppenum import MyEnum, enum_to_string
+    from cppenum import Result, Suit, guess_card
 
-    assert MyEnum.FIRSTOPTION != MyEnum.SECONDOPTION
-    assert MyEnum.SECONDOPTION != MyEnum.THIRDOPTION
-    assert enum_to_string(MyEnum.FIRSTOPTION) == "first"
-    assert enum_to_string(MyEnum.SECONDOPTION) == "second"
-    assert enum_to_string(MyEnum.THIRDOPTION) == "third"
+    # assert issubclass(Suit, Enum)
+    assert guess_card(Suit.Clubs) == Result.Hit
+    assert guess_card(Suit.Hearts) == Result.Miss
 
-
-@cpp2py_tester("enuminclass.hpp")
-def test_enum_in_class():
-    from enuminclass import MyEnum, MyEnumClass
+    from cppenum import MyEnum, MyEnumClass
 
     assert MyEnum.FIRSTOPTION != MyEnum.SECONDOPTION
     assert MyEnum.SECONDOPTION != MyEnum.THIRDOPTION
@@ -153,3 +144,45 @@ def test_defaultvalues():
     assert a.half(True) == 2
     assert a.append() == "abcdef"
     assert a.append("hello'") == "hello'def"
+
+
+@cpp2py_tester("complexhierarchy.hpp")
+def test_complex_hierarchy():
+    from complexhierarchy import A, B
+
+    a = A()
+    assert a.base1_method() == 1
+    assert a.base2_method() == 2
+    assert a.a_method() == 3
+    b = B()
+    assert b.base1_method() == 4
+    assert b.base2_method() == 2
+    assert b.b_method() == 5
+
+
+@cpp2py_tester("throwexception.hpp")
+def test_exceptions():
+    # http://docs.cython.org/src/userguide/wrapping_CPlusPlus.html#exceptions
+    from throwexception import (
+        throw_bad_alloc,
+        throw_bad_cast,
+        throw_domain_error,
+        throw_invalid_argument,
+        throw_ios_base_failure,
+        throw_other,
+        throw_out_of_range,
+        throw_overflow_error,
+        throw_range_error,
+        throw_underflow_error,
+    )
+
+    pytest.raises(MemoryError, throw_bad_alloc)
+    pytest.raises(TypeError, throw_bad_cast)
+    pytest.raises(ValueError, throw_domain_error)
+    pytest.raises(ValueError, throw_invalid_argument)
+    pytest.raises(IOError, throw_ios_base_failure)
+    pytest.raises(IndexError, throw_out_of_range)
+    pytest.raises(OverflowError, throw_overflow_error)
+    pytest.raises(ArithmeticError, throw_range_error)
+    pytest.raises(ArithmeticError, throw_underflow_error)
+    pytest.raises(RuntimeError, throw_other)

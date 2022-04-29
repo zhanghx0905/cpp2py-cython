@@ -1,12 +1,7 @@
 #pragma once
 #include "deppart2.hpp"
 
-
-class A
-{
+class A {
 public:
-    B* make()
-    {
-        return new B();
-    }
+    B* make() { return new B(); }
 };

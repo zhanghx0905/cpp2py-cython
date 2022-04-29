@@ -109,7 +109,7 @@ Ubuntu 20.04
 ```shell
 sudo apt install libclang-12-dev g++ python3.8-dev
 pip install -r requirement.txt
-python setup.py install
+pip install .
 ```
 
 ## Test

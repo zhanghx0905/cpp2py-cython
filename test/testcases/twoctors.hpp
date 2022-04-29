@@ -1,6 +1,5 @@
-class A
-{
+class A {
 public:
-    A() {}
-    A(int a) {}
+    A() { }
+    A(int a) { }
 };

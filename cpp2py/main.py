@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from itertools import chain
 from typing import List, Optional
 
-from black import format_str, mode
+from black import format_str, FileMode
 
 from .config import Config, Imports
 from .generator import DeclGenerator, ImplGenerator, StubGenerator
@@ -30,7 +30,7 @@ class WrapperResult:
         # self.source_content = autopep8.fix_code(self.source_content)
         if self.stub_name is not None:
             self.stub_content = format_str(
-                self.setup_content, mode=mode.Mode(is_pyi=True)
+                self.setup_content, mode=FileMode(is_pyi=True)
             )
 
     def __iter__(self):

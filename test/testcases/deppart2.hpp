@@ -1,11 +1,6 @@
 #pragma once
 
-
-class B
-{
+class B {
 public:
-    int getValue()
-    {
-        return 5;
-    }
+    int getValue() { return 5; }
 };

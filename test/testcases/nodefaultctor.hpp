@@ -1,9 +1,6 @@
-class A
-{
+class A {
     int member;
+
 public:
-    void setMember(int value)
-    {
-        member = value;
-    }
+    void setMember(int value) { member = value; }
 };

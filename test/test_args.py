@@ -1,55 +1,36 @@
-from cpp2py import AbstractTypeConverter, Config
+import os
+import shutil
 
-from tools import cpp2py_tester
+from cpp2py import Config
 
-
-@cpp2py_tester(["indeppart1.hpp", "indeppart2.hpp"], modulename="combined")
-def test_independent_parts():
-    from combined import ClassA, ClassB
-
-    a = ClassA()
-    assert not a.result()
-    b = ClassB()
-    assert b.result()
+from tools import TESTCASES_PATH, cpp2py_tester
 
 
-@cpp2py_tester(["deppart1.hpp", "deppart2.hpp"], modulename="depcombined")
-def test_dependent_parts():
-    from depcombined import A
+def test_external_library():
+    """set LD_LIBRARY_PATH before test to find the shared liarary"""
+    library_dir = os.path.abspath(os.path.join(TESTCASES_PATH, "externallib"))
 
-    a = A()
-    b = a.make()
-    assert b.get_value() == 5
-
-
-def test_register_custom_type_converter():
-    class CustomTypeConverter(AbstractTypeConverter):
-        def _matches(self):
-            raise NotImplementedError()
-
-        def python_to_cpp(self):
-            raise NotImplementedError()
-
-        def cpp_call_arg(self):
-            raise NotImplementedError()
-
-        def return_output(self, cpp_call: str, **kwargs) -> str:
-            raise NotImplementedError()
-
-        def input_type_decl(self):
-            raise NotImplementedError()
-
-        def _add_includes(self, includes):
-            raise NotImplementedError()
-
+    cwd = os.getcwd()
+    try:
+        os.chdir(library_dir)
+        os.system("make")
+    finally:
+        os.chdir(cwd)
+    shutil.copyfile(os.path.join(library_dir, "libmylib.so"), "./libmylib.so")
     config = Config()
-    config.registered_converters.append(CustomTypeConverter)
+    config.add_library_dir(library_dir)
+    config.add_library("mylib")
 
-    @cpp2py_tester("boolinboolout.hpp", config=config, warnmsg=".* ignoring .*")
+    @cpp2py_tester("withexternallib.hpp", config=config, incdirs=["externallib"])
     def run():
-        ...
+        from withexternallib import get_number
 
-    run()
+        assert get_number() == 5
+
+    try:
+        run()
+    finally:
+        os.remove("./libmylib.so")
 
 
 @cpp2py_tester("addincludedir.hpp", incdirs=["anotherincludedir"])

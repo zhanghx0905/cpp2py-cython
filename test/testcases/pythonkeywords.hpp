@@ -1,4 +1,1 @@
-double def(double in, double lambda)
-{
-    return in * lambda;
-}
+double def(double in, double lambda) { return in * lambda; }

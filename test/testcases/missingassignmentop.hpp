@@ -1,12 +1,8 @@
-class MyClassA
-{
-    void operator=(const MyClassA& other) {}
+class MyClassA {
+    void operator=(const MyClassA& other) { }
+
 public:
-    MyClassA() {}
+    MyClassA() { }
 };
 
-
-MyClassA factory()
-{
-    return MyClassA(5);
-}
+MyClassA factory() { return MyClassA(5); }

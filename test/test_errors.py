@@ -3,11 +3,13 @@ import pytest
 from tools import cpp2py_tester
 
 
-@cpp2py_tester("fails.hpp", warnmsg=".* ignoring .*")
-def test_fails():
-    from fails import A
+@cpp2py_tester("overload.hpp", warnmsg="Ignoring overloaded .*")
+def test_overloading_is_not_possible():
+    from overload import A, plus_one
 
-    assert not hasattr(A, "my_function")
+    a = A()
+    assert a.plus_one(3.0) == 4.0
+    assert plus_one(3.0) == 4.0
 
 
 @cpp2py_tester("twoctors.hpp", warnmsg="Ignoring overloaded .*")
@@ -43,3 +45,15 @@ def test_name_clash():
     assert a.n == 20
     a.set_n(30)
     assert a.get_n() == 30
+
+
+@cpp2py_tester("missingdefaultctor.hpp")
+def test_missing_default_ctor():
+    with pytest.raises(ImportError):
+        import missingdefaultctor
+
+
+@cpp2py_tester("missingassignmentop.hpp")
+def test_missing_assignment():
+    with pytest.raises(ImportError):
+        import missingassignmentop

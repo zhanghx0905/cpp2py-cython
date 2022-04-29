@@ -1,6 +1,6 @@
 cdef class {{ name }}:
     cdef cpp.{{ name }} * thisptr
-    cdef bool owner
+    cdef public bool owner
 
     def __cinit__(self):
         self.thisptr = NULL

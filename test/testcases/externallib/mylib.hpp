@@ -1,7 +1,8 @@
-class A
-{
+class A {
     int i;
+
 public:
-    A();
-    int get();
+    A()
+        : i(5) {};
+    int get() { return i; };
 };
