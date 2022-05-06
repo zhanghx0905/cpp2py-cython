@@ -15,8 +15,7 @@ CONSTRUCTOR_DECL = "%(class_name)s(%(args)s) except +"
 VAR_DECL = "%(type)s %(name)s"
 CONSTANT_DECL = """cdef extern from "%(filename)s":
     cdef enum:
-        %(decl)s
-"""
+        %(decl)s"""
 
 
 def _gen_args_decl(func: Function):
@@ -67,6 +66,7 @@ class DeclGenerator:
             # items in class_decl will override these of class_.__dict__
             class_decl = {**class_.__dict__, **class_decl}
             classes.append(render("class_decl", **class_decl))
+
         return render(
             "declarations",
             enums=enums,

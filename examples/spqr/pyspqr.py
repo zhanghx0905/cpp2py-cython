@@ -1,3 +1,4 @@
+import atexit
 import numpy as np
 from scipy import sparse
 
@@ -46,7 +47,7 @@ def qr(mat: sparse.csc_matrix):
     Q = spqr.cholmod_to_scipy_sparse(Q, cc)
     R = spqr.cholmod_to_scipy_sparse(R, cc)
 
-    spqr.cholmod_l_finish(cc)
+    atexit.register(lambda: spqr.cholmod_finish(cc))
     return Q, R, E, rank
 
 
