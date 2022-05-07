@@ -1,5 +1,4 @@
-cdef extern from "{{ enum.filename }}" namespace "{{ enum.namespace }}":
-    cdef enum {{ enum.name }}:
+cdef enum {{ enum.name }}:
 {%- for constant in enum.constants %}
-        {{ constant.name }} "{{ constant.fullname }}"
+    {{ constant.name }} "{{ constant.fullname }}"
 {%- endfor %}

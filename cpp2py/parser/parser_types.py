@@ -43,6 +43,8 @@ class Variable(_BaseSymbol):
     """class's field or function's argument"""
 
     type: CXXType = None
+    is_const: bool = False
+
     value: object = None  # default value
 
 
@@ -118,6 +120,7 @@ class Class(Record):
 @dataclass
 class ParseResult:
     macros: dict[str, Macro] = field(default_factory=dict)
+    variables: dict[str, Variable] = field(default_factory=dict)
     enums: dict[str, Enum] = field(default_factory=dict)
     classes: dict[str, Class] = field(default_factory=dict)
     functions: dict[str, list[Function]] = field(

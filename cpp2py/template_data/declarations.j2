@@ -1,15 +1,13 @@
-{% for typedef in typedefs %}
-{{ typedef }}
+{% if cppdecls %}
+cdef extern from "{{ filename }}" namespace "{{ namespace }}":
+{% for decl in cppdecls %}
+    {{ decl | indent(4)}}
 {% endfor %}
-{% for enum in enums %}
-{{ enum }}
+{%- endif %}
+
+{% if cdecls -%}
+cdef extern from "{{ filename }}":
+{% for decl in cdecls %}
+    {{ decl | indent(4)}}
 {% endfor %}
-{% for function in functions %}
-{{ function }}
-{% endfor %}
-{% for class in classes %}
-{{ class }}
-{% endfor %}
-{% for constant in constants %}
-{{ constant }}
-{% endfor %}
+{%- endif %}

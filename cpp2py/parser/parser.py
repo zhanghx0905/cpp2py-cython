@@ -1,13 +1,12 @@
 import os
 import re
 from itertools import count
-from warnings import warn
 from typing import Dict, List
+from warnings import warn
 
 from clang import cindex
 from clang.cindex import Cursor, CursorKind
 from more_itertools import ilen, last, partition, split_at
-
 
 from ..config import Imports
 from ..cxxtypes import CXXType
@@ -121,6 +120,19 @@ class ClangParser:
                 self._process_class(cur)
             elif cur.kind in {CursorKind.TYPEDEF_DECL, CursorKind.TYPE_ALIAS_DECL}:
                 self._process_typedef(cur, namespace)
+            elif cur.kind == CursorKind.VAR_DECL:
+                self._process_variable(cur, namespace)
+
+    def _process_variable(self, cur: Cursor, namespace: str):
+        type = self.build_cxxtype(cur.type)
+        var = Variable(
+            name=cur.spelling,
+            filename=self.get_filename(cur),
+            type=type,
+            namespace=namespace,
+            is_const=type.get_canonical().type.is_const_qualified(),
+        )
+        set_when_missing(self.objects.variables, var)
 
     def _process_parameter(self, cur: Cursor, func: Function, default_name: str):
         var = Variable(

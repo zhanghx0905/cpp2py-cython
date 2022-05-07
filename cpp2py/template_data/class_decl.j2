@@ -1,15 +1,11 @@
-cdef extern from "{{ filename }}" namespace "{{ namespace }}":
-    cdef cppclass {{ name }}:
-{%- if empty %}
-        pass
-{%- else %}
+cdef cppclass {{ name }}:
 {%- for field in fields %}
-        {{ field }}
+    {{ field }}
 {%- endfor %}
 {%- for ctor in ctors %}
-        {{ ctor }}
+    {{ ctor }}
 {%- endfor %}
 {%- for method in methods %}
-        {{ method|indent(8) }}
+    {{ method|indent(4) }}
 {%- endfor %}
-{%- endif %}
+    pass
