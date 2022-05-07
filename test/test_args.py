@@ -1,5 +1,4 @@
 import os
-import shutil
 
 from cpp2py import Config
 
@@ -8,7 +7,8 @@ from tools import TESTCASES_PATH, cpp2py_tester
 
 def test_external_library():
     """set LD_LIBRARY_PATH before test to find the shared liarary"""
-    library_dir = os.path.abspath(os.path.join(TESTCASES_PATH, "externallib"))
+    EXTERNAL_DIR = "anotherincludedir"
+    library_dir = os.path.abspath(os.path.join(TESTCASES_PATH, EXTERNAL_DIR))
 
     cwd = os.getcwd()
     try:
@@ -16,25 +16,21 @@ def test_external_library():
         os.system("make")
     finally:
         os.chdir(cwd)
-    shutil.copyfile(os.path.join(library_dir, "libmylib.so"), "./libmylib.so")
+
     config = Config()
     config.add_library_dir(library_dir)
-    config.add_library("mylib")
 
-    @cpp2py_tester("withexternallib.hpp", config=config, incdirs=["externallib"])
+    @cpp2py_tester("withincludedir.hpp", config=config, incdirs=[EXTERNAL_DIR])
     def run():
-        from withexternallib import get_number
+        from withincludedir import length
 
-        assert get_number() == 5
+        assert length(3.0, 4.0) == 5.0
 
-    try:
-        run()
-    finally:
-        os.remove("./libmylib.so")
+    run()
 
 
-@cpp2py_tester("addincludedir.hpp", incdirs=["anotherincludedir"])
+@cpp2py_tester("withincludedir.hpp", incdirs=["anotherincludedir"])
 def test_another_include_dir():
-    from addincludedir import length
+    from withincludedir import length
 
     assert length(3.0, 4.0) == 5.0

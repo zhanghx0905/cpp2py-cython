@@ -107,7 +107,7 @@ Ubuntu 20.04
 **Python 3.8 or newer**
 
 ```shell
-sudo apt install libclang-12-dev g++ python3.8-dev
+sudo apt install python3-pip libclang-12-dev
 pip install -r requirement.txt
 pip install .
 ```

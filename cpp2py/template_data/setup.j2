@@ -22,7 +22,7 @@ extensions = [
             ("NDEBUG",),
             ],
         extra_compile_args=[
-            "-std=c++11",
+            "-std=c++17",
 {%- for compiler_flag in compiler_flags %}
             "{{ compiler_flag }}",
 {%- endfor %}
