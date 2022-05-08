@@ -20,6 +20,8 @@ class Config:
     decl_filename: str = "_declarations"
     setup_filename: str = "setup"
 
+    global_vars: str = "cvar"
+
     before_build_handlers: Callable[..., None] = lambda: None
     registered_converters: List[type] = field(default_factory=list)
     additional_declarations: List[str] = field(default_factory=list)

@@ -13,9 +13,14 @@ CONSTRUCTOR_CALL = "self.thisptr = new cpp.%(class_name)s(%(call_args)s)"
 METHOD_CALL = "self.thisptr.%(name)s(%(call_args)s)"
 STATIC_METHOD_CALL = "cpp.%(class_name)s.%(name)s(%(call_args)s)"
 SETTER_CALL = "self.thisptr.%(name)s = %(call_args)s"
+GLOBAL_SETTER_CALL = "cpp.%(name)s = %(call_args)s"
 GETTER_CALL = "self.thisptr.%(name)s"
+GLOBAL_GETTER_CALL = "cpp.%(name)s"
+
 PYSIGN = "def %(name)s(%(args)s) -> %(ret_type)s: ..."
+
 _VOID = object()
+_AUTO = object()
 
 
 class _VoidConverter(BaseTypeConverter):
@@ -27,6 +32,11 @@ class _VoidConverter(BaseTypeConverter):
 
     def pysign_type_decl(self, vtype: VarType):
         return "None"
+
+
+class _AutoConverter(BaseTypeConverter):
+    def __init__(self):
+        ...
 
 
 class PostInitMeta(type):
@@ -54,8 +64,10 @@ class FunctionGenerator(metaclass=PostInitMeta):
         self.arg_converters = [get_converter(arg.type, arg.name) for arg in args]
         if ret_type == _VOID:
             self.ret_converter = _VoidConverter()
+        elif ret_type == _AUTO:
+            self.ret_converter = _AutoConverter()
         else:
-            self.ret_converter = get_converter(ret_type, "")
+            self.ret_converter = get_converter(ret_type, name)
         self.ret_copy = True
 
     def __post_init__(self):
@@ -218,6 +230,9 @@ class GetterGenerator(MethodGenerator):
     def _function_prefix(self):
         return "def"
 
+    def _function_name(self):
+        return self.name
+
     def _cpp_call(self, _args: str):
         return GETTER_CALL % {
             "name": self.name,
@@ -245,8 +260,33 @@ class SetterGenerator(MethodGenerator):
     def _function_prefix(self):
         return "def"
 
+    def _function_name(self):
+        return self.name
+
     def _cpp_call(self, args: str):
         return SETTER_CALL % {
             "name": self.name,
             "call_args": args,
         }
+
+
+class GlobalGetterGenerator(GetterGenerator):
+    def _cpp_call(self, _args: str):
+        return GLOBAL_GETTER_CALL % {
+            "name": self.name,
+        }
+
+
+class GlobalSetterGenerator(SetterGenerator):
+    def _cpp_call(self, args: str):
+        return GLOBAL_SETTER_CALL % {
+            "name": self.name,
+            "call_args": args,
+        }
+
+
+class MacroGetterGenerator(GlobalGetterGenerator):
+    def __init__(
+        self, field_name: str, typenames: Set[str], includes: Imports, class_name: str
+    ) -> None:
+        super().__init__(field_name, _AUTO, typenames, includes, class_name)
