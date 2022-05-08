@@ -10,7 +10,7 @@ except ImportError:
     wrapper.build()
     import spqr
 
-
+cvar = spqr.cvar
 cholmod_sparse = spqr.cholmod_sparse_struct
 
 
@@ -19,9 +19,9 @@ def scipy_to_cholmod_sparse(mat: sparse.csc_matrix, view: cholmod_sparse):
     mat.sort_indices()
     view.nrow, view.ncol = mat.shape
     view.nzmax = mat.nnz
-    view.itype = spqr.CHOLMOD_LONG
-    view.dtype = spqr.CHOLMOD_DOUBLE
-    view.xtype = spqr.CHOLMOD_REAL
+    view.itype = cvar.CHOLMOD_LONG
+    view.dtype = cvar.CHOLMOD_DOUBLE
+    view.xtype = cvar.CHOLMOD_REAL
     view.sorted = 1
     view.packed = 1
 
@@ -42,12 +42,12 @@ def qr(mat: sparse.csc_matrix):
     R = cholmod_sparse.__new__(cholmod_sparse)
 
     E, rank = spqr.suite_sparse_qr_c_qr(
-        spqr.SPQR_ORDERING_DEFAULT, spqr.SPQR_DEFAULT_TOL, mat.shape[0], A, Q, R, cc
+        cvar.SPQR_ORDERING_DEFAULT, cvar.SPQR_DEFAULT_TOL, mat.shape[0], A, Q, R, cc
     )
     Q = spqr.cholmod_to_scipy_sparse(Q, cc)
     R = spqr.cholmod_to_scipy_sparse(R, cc)
 
-    atexit.register(lambda: spqr.cholmod_finish(cc))
+    atexit.register(lambda: spqr.cholmod_l_finish(cc))
     return Q, R, E, rank
 
 

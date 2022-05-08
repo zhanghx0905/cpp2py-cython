@@ -38,7 +38,7 @@ def split_symbols(objects: ParseResult):
 
 
 def process_enum(enum: Enum):
-    return render("enum_decl", enum=enum)
+    return render("decl/enum", enum=enum)
 
 
 def process_variable(var: Variable):
@@ -79,7 +79,7 @@ def process_class(class_: Class):
         "ctors": ctors,
         "methods": methods,
     }
-    return render("class_decl", **class_decl)
+    return render("decl/class", **class_decl)
 
 
 _SYMBOL_HANDLER = {
@@ -110,7 +110,7 @@ class DeclGenerator:
                     cppdecls.append(gen)
             outputs.append(
                 render(
-                    "declarations",
+                    "decl/declarations",
                     **{
                         "filename": key[0],
                         "namespace": key[1],

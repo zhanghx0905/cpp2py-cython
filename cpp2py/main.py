@@ -51,7 +51,7 @@ def make_wrapper(config: Config):
     includes = Imports(config)
     parse_ret = parse(config.headers, config.incdirs, config.encoding, includes)
 
-    postprocessor = Postprocessor(parse_ret, includes)
+    postprocessor = Postprocessor(parse_ret, includes, config)
     process_ret = postprocessor.generate_output()
 
     # generate PXD
@@ -59,7 +59,7 @@ def make_wrapper(config: Config):
     pxd_content = decl_generator.generate() + config.export_declaration()
 
     # generate PYX
-    impl_generator = ImplGenerator(process_ret)
+    impl_generator = ImplGenerator(process_ret, config)
     pyx_content = impl_generator.generate()
 
     # add modules import
@@ -95,7 +95,7 @@ def make_wrapper(config: Config):
     if config.generate_stub:
         results.stub_name = f"{config.modulename}.pyi"
         results.stub_content = black.format_str(
-            StubGenerator(process_ret).generate(), mode=black.FileMode(is_pyi=True)
+            StubGenerator(process_ret, config).generate(), mode=black.FileMode(is_pyi=True)
         )
 
     if config.verbose >= 1:

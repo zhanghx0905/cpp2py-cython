@@ -24,7 +24,8 @@ config = Config(
     incdirs=["/usr/include/suitesparse"],
     libraries=["cholmod", "spqr"],
     registered_converters=[DataConverter, IndexConverter],
-    generate_stub=False,
+    generate_stub=True,
+    clear_files=False,
 )
 
 
@@ -88,3 +89,6 @@ config.before_build_handlers = before_build
 
 def build():
     make_cython_extention(config)
+
+if __name__ == "__main__":
+    build()

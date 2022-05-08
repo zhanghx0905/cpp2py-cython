@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 from cpp2py import Config, VoidPtrConverter
-from cpp2py.parser.parser_types import Enum
 
 from tools import cpp2py_tester
 
@@ -186,3 +185,22 @@ def test_exceptions():
     pytest.raises(ArithmeticError, throw_range_error)
     pytest.raises(ArithmeticError, throw_underflow_error)
     pytest.raises(RuntimeError, throw_other)
+
+
+@cpp2py_tester("globals.hpp")
+def test_global_vars_macros():
+    from globals import cvar, get_hello
+
+    assert cvar.V == 5
+    assert cvar.PI == np.float32(3.14159)
+    assert cvar.T is False
+    assert cvar.HELLO == get_hello()
+    cvar.HELLO = "hello too"
+    assert "hello too" == get_hello()
+
+    with pytest.raises(AttributeError):
+        cvar.V = 4
+    with pytest.raises(AttributeError):
+        cvar.PI = 4
+    with pytest.raises(AttributeError):
+        cvar.T = True

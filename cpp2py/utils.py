@@ -10,6 +10,13 @@ _NAMESPACE_PATTERN = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*::")
 _CAMEL_PATTERN = re.compile(r"(?<=[a-z])[A-Z]|(?<!^)[A-Z](?=[a-z])")
 
 
+class PostInitMeta(type):
+    def __call__(cls, *args, **kwargs):
+        obj = type.__call__(cls, *args, **kwargs)
+        obj.__post_init__()
+        return obj
+
+
 @contextmanager
 def _suppress_stream(file_descriptor: int):
     null_fd = os.open(os.devnull, os.O_RDWR)

@@ -1,12 +1,13 @@
 import warnings
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Callable, List, Optional, Set
-
-from enum import Enum as pyEnum
+from itertools import chain
+from typing import Callable, List, Optional, Union
 
 from .config import Config, Imports
+from .cxxtypes import TypeNames
 from .generator.func import (
+    AUTO,
     ConstructorGenerator,
     FunctionGenerator,
     GetterGenerator,
@@ -14,7 +15,7 @@ from .generator.func import (
     SetterGenerator,
     StaticMethodGenerator,
 )
-from .parser import Class, Function, Method, ParseResult, Variable
+from .parser import Class, Function, Macro, Method, ParseResult, Variable
 
 
 @dataclass
@@ -24,8 +25,8 @@ class BindedFunc:
 
 
 @dataclass
-class BindedField:
-    field: Variable
+class BindedVar:
+    name: str
     getter: GetterGenerator
     setter: Optional[SetterGenerator] = None
 
@@ -35,28 +36,16 @@ class BindedClass:
     name: str
     ctor: Optional[BindedFunc] = None
     methods: List[BindedFunc] = field(default_factory=list)
-    fields: List[BindedField] = field(default_factory=list)
+    fields: List[BindedVar] = field(default_factory=list)
 
 
 @dataclass
 class ProcessOutput:
     objects: ParseResult
-    vars: List[BindedField] = field(default_factory=list)
+    vars: List[BindedVar] = field(default_factory=list)
     classes: List[BindedClass] = field(default_factory=list)
     # functions remove overloaded
     functions: List[BindedFunc] = field(default_factory=list)
-
-
-@dataclass
-class TypeNames:
-    classes: Set[str]
-    enums: Set[str]
-
-
-class VarType(pyEnum):
-    FIELD = 0
-    GLOBAL_VAR = 1
-    MACRO = 2
 
 
 class Postprocessor:
@@ -125,32 +114,35 @@ class Postprocessor:
                 return func, generator
         return None
 
-    def _bind_var(self, var: Variable, class_name: str, vartype: VarType):
-
+    def _bind_var(self, var: Union[Variable, Macro], class_name: str, is_field: bool):
+        if isinstance(var, Macro):
+            vtype = AUTO
+            no_setter = True
+        else:
+            vtype = var.type
+            no_setter = var.type.get_canonical().type.is_const_qualified()
+        prefix = "self.thisptr" if is_field else "cpp"
         try:
             getter = GetterGenerator(
-                var.name,
-                var.type,
-                self.classnames,
-                self.includes,
-                class_name,
+                var.name, vtype, self.typenames, self.includes, class_name, prefix
             )
         except NotImplementedError as err:
             warnings.warn(f"{err} ignoring field '{var.name}'")
             return None
-
-        if not var.type.type.is_const_qualified():
+        setter = None
+        if not no_setter:
             try:
                 setter = SetterGenerator(
                     var.name,
-                    var.type,
-                    self.classnames,
+                    vtype,
+                    self.typenames,
                     self.includes,
                     class_name,
+                    prefix,
                 )
             except NotImplementedError as err:
                 warnings.warn(f"{err} ignoring field '{var.name}' setter")
-        # return bfield
+        return BindedVar(var.name, getter, setter)
 
     def _method_builder(self, m: Method, class_name: str):
         builder = StaticMethodGenerator if m.is_static else MethodGenerator
@@ -158,23 +150,24 @@ class Postprocessor:
             m.name,
             m.args,
             m.ret_type,
-            self.classnames,
+            self.typenames,
             self.includes,
             class_name,
         )
 
     def _bind_generators(self):
-        vars = []
-        for var in self.objects.variables.values():
-            bvar = self._bind_var(var, self.config.global_vars, VarType.GLOBAL_VAR)
+        # bind global variables and macros
+        for var in chain(self.objects.variables.values(), self.objects.macros.values()):
+            bvar = self._bind_var(var, f"_{self.config.global_vars}", False)
             if bvar is not None:
-                vars.append(bvar)
+                self.output.vars.append(bvar)
 
+        # bind functions
         for funcs in self.objects.functions.values():
             ret = self._bind_overloaded_functions(
                 funcs,
                 lambda func: FunctionGenerator(
-                    func.name, func.args, func.ret_type, self.classnames, self.includes
+                    func.name, func.args, func.ret_type, self.typenames, self.includes
                 ),
             )
             if ret is not None:
@@ -200,7 +193,7 @@ class Postprocessor:
             ret = self._bind_overloaded_functions(
                 ctors,
                 lambda ctor: ConstructorGenerator(
-                    ctor.args, self.classnames, self.includes, class_.name
+                    ctor.args, self.typenames, self.includes, class_.name
                 ),
             )
             if ret is not None:
@@ -208,7 +201,7 @@ class Postprocessor:
 
             # build fields
             for field in class_.fields:
-                bfield = self._bind_var(field, class_.name, VarType.FIELD)
+                bfield = self._bind_var(field, class_.name, True)
                 if bfield is not None:
                     bclass.fields.append(bfield)
 

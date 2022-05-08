@@ -1,10 +1,11 @@
 #include <string>
+#include <vector>
+#define V 5
+const float PI = 3.14159;
+constexpr bool T = false;
+std::string HELLO = "hello world";
 
-const int v = 5;
-bool T = false;
-std::string s = "hello world";
-
-std::string get_s()
+std::string getHello()
 {
-    return s;
+    return HELLO;
 }
