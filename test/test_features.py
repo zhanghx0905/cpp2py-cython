@@ -69,9 +69,9 @@ def test_operators():
     assert op * 2 == 10
     assert op / 5 == 1
     assert op % 2 == 1
-    assert op and True == True
     op += 3
     assert op.v == 3
+    assert 2 < op < 4
     op -= 1
     assert op.v == 2
     op *= 2
@@ -80,10 +80,15 @@ def test_operators():
     assert op.v == 1
     op %= 2
     assert op.v == 1
-    op |= True
-    assert op.b == True
-    op &= True
-    assert op.b == True
+    op.v = 0b11
+    assert op | 0b100 == 0b111
+    assert op & 0b10 == 0b10
+    assert ~op == ~0b11
+
+    op |= 0b100
+    assert op.v == 0b111
+    op &= 0b10
+    assert op.v == 0b10
 
 
 @cpp2py_tester("typedef.hpp")
