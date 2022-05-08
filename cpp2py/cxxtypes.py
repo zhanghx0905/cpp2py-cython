@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Set
 
 from clang.cindex import Type, TypeKind
 
@@ -81,3 +82,9 @@ class CXXType:
             return ret
 
         return recursive_build(type)
+
+
+@dataclass
+class TypeNames:
+    classes: Set[str]
+    enums: Set[str]

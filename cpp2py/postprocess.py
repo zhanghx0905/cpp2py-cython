@@ -1,10 +1,13 @@
 import warnings
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Callable, List, Optional
+from itertools import chain
+from typing import Callable, List, Optional, Union
 
-from .config import Imports
+from .config import Config, Imports
+from .cxxtypes import TypeNames
 from .generator.func import (
+    AUTO,
     ConstructorGenerator,
     FunctionGenerator,
     GetterGenerator,
@@ -12,7 +15,7 @@ from .generator.func import (
     SetterGenerator,
     StaticMethodGenerator,
 )
-from .parser import Class, Function, Method, ParseResult, Variable
+from .parser import Class, Function, Macro, Method, ParseResult, Variable
 
 
 @dataclass
@@ -22,8 +25,8 @@ class BindedFunc:
 
 
 @dataclass
-class BindedField:
-    field: Variable
+class BindedVar:
+    name: str
     getter: GetterGenerator
     setter: Optional[SetterGenerator] = None
 
@@ -33,44 +36,31 @@ class BindedClass:
     name: str
     ctor: Optional[BindedFunc] = None
     methods: List[BindedFunc] = field(default_factory=list)
-    fields: List[BindedField] = field(default_factory=list)
+    fields: List[BindedVar] = field(default_factory=list)
 
 
 @dataclass
 class ProcessOutput:
     objects: ParseResult
+    vars: List[BindedVar] = field(default_factory=list)
     classes: List[BindedClass] = field(default_factory=list)
     # functions remove overloaded
     functions: List[BindedFunc] = field(default_factory=list)
 
 
-def _bind_overloaded_functions(
-    funcs: List[Function], generator_builder: Callable[..., FunctionGenerator]
-):
-    for idx, func in enumerate(funcs):
-        try:
-            generator = generator_builder(func)
-        except NotImplementedError as err:
-            warnings.warn(f"{err} ignoring '{func.fullname}'")
-        else:
-            if idx != len(funcs) - 1:
-                warnings.warn(
-                    f"Ignoring overloaded {func.__class__.__name__}: {func.fullname}"
-                )
-            return func, generator
-    return None
-
-
 class Postprocessor:
-    def __init__(self, objects: ParseResult, includes: Imports):
+    def __init__(self, objects: ParseResult, includes: Imports, config: Config):
         self.objects = objects
-        self.classnames = set(self.objects.classes.keys())
+        self.typenames = TypeNames(
+            set(self.objects.classes.keys()), set(self.objects.enums.keys())
+        )
         self.includes = includes
+        self.config = config
 
     def generate_output(self):
         self.output = ProcessOutput(self.objects)
         self._handle_inheritance()
-        self._handle_overloading_or_no_ctors()
+        self._bind_generators()
         return self.output
 
     def _handle_inheritance(self):
@@ -108,23 +98,76 @@ class Postprocessor:
         for leaf_name in leaf_names:
             _copy_base_methods(class_dict[leaf_name])
 
+    def _bind_overloaded_functions(
+        self, funcs: List[Function], generator_builder: Callable[..., FunctionGenerator]
+    ):
+        for idx, func in enumerate(funcs):
+            try:
+                generator = generator_builder(func)
+            except NotImplementedError as err:
+                warnings.warn(f"{err} ignoring '{func.fullname}'")
+            else:
+                if idx != len(funcs) - 1:
+                    warnings.warn(
+                        f"Ignoring overloaded {func.__class__.__name__}: {func.fullname}"
+                    )
+                return func, generator
+        return None
+
+    def _bind_var(self, var: Union[Variable, Macro], class_name: str, is_field: bool):
+        if isinstance(var, Macro):
+            vtype = AUTO
+            no_setter = True
+        else:
+            vtype = var.type
+            no_setter = var.type.get_canonical().type.is_const_qualified()
+        prefix = "self.thisptr" if is_field else "cpp"
+        try:
+            getter = GetterGenerator(
+                var.name, vtype, self.typenames, self.includes, class_name, prefix
+            )
+        except NotImplementedError as err:
+            warnings.warn(f"{err} ignoring field '{var.name}'")
+            return None
+        setter = None
+        if not no_setter:
+            try:
+                setter = SetterGenerator(
+                    var.name,
+                    vtype,
+                    self.typenames,
+                    self.includes,
+                    class_name,
+                    prefix,
+                )
+            except NotImplementedError as err:
+                warnings.warn(f"{err} ignoring field '{var.name}' setter")
+        return BindedVar(var.name, getter, setter)
+
     def _method_builder(self, m: Method, class_name: str):
         builder = StaticMethodGenerator if m.is_static else MethodGenerator
         return builder(
             m.name,
             m.args,
             m.ret_type,
-            self.classnames,
+            self.typenames,
             self.includes,
             class_name,
         )
 
-    def _handle_overloading_or_no_ctors(self):
+    def _bind_generators(self):
+        # bind global variables and macros
+        for var in chain(self.objects.variables.values(), self.objects.macros.values()):
+            bvar = self._bind_var(var, f"_{self.config.global_vars}", False)
+            if bvar is not None:
+                self.output.vars.append(bvar)
+
+        # bind functions
         for funcs in self.objects.functions.values():
-            ret = _bind_overloaded_functions(
+            ret = self._bind_overloaded_functions(
                 funcs,
                 lambda func: FunctionGenerator(
-                    func.name, func.args, func.ret_type, self.classnames, self.includes
+                    func.name, func.args, func.ret_type, self.typenames, self.includes
                 ),
             )
             if ret is not None:
@@ -136,7 +179,7 @@ class Postprocessor:
             # build functions
             method_builder = partial(self._method_builder, class_name=class_.name)
             for methods in class_.methods.values():
-                ret = _bind_overloaded_functions(methods, method_builder)
+                ret = self._bind_overloaded_functions(methods, method_builder)
                 if ret is not None:
                     bclass.methods.append(BindedFunc(*ret))
 
@@ -147,10 +190,10 @@ class Postprocessor:
                     ctors = class_.ctors
                 elif class_.auto_default_constructible:
                     ctors.append(Method(class_.name, args=[]))
-            ret = _bind_overloaded_functions(
+            ret = self._bind_overloaded_functions(
                 ctors,
                 lambda ctor: ConstructorGenerator(
-                    ctor.args, self.classnames, self.includes, class_.name
+                    ctor.args, self.typenames, self.includes, class_.name
                 ),
             )
             if ret is not None:
@@ -158,28 +201,8 @@ class Postprocessor:
 
             # build fields
             for field in class_.fields:
-                try:
-                    bfield = BindedField(
-                        field,
-                        getter=GetterGenerator(
-                            field.name,
-                            field.type,
-                            self.classnames,
-                            self.includes,
-                            class_.name,
-                        ),
-                    )
-                    if not field.type.type.is_const_qualified():
-                        bfield.setter = SetterGenerator(
-                            field.name,
-                            field.type,
-                            self.classnames,
-                            self.includes,
-                            class_.name,
-                        )
-                except NotImplementedError as err:
-                    warnings.warn(f"{err} ignoring field '{field.name}'")
-                else:
+                bfield = self._bind_var(field, class_.name, True)
+                if bfield is not None:
                     bclass.fields.append(bfield)
 
             self.output.classes.append(bclass)

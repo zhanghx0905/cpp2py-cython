@@ -1,18 +1,12 @@
 import re
 from abc import ABCMeta, abstractmethod
-from enum import Enum
-from typing import List, Set
+from typing import List
 
 from clang.cindex import TypeKind
 
 from .config import Imports
-from .cxxtypes import CXXType
+from .cxxtypes import CXXType, TypeNames
 from .utils import render
-
-
-class VarType(Enum):
-    PARAMETER = 0
-    RETURN = 1
 
 
 class AbstractTypeConverter(metaclass=ABCMeta):
@@ -29,10 +23,11 @@ class AbstractTypeConverter(metaclass=ABCMeta):
         self,
         type: CXXType,
         argname: str,
-        classnames: Set[str],
+        typenames: TypeNames,
         includes: Imports,
     ):
-        self.classnames = classnames
+        self.typenames = typenames
+        self.classnames = typenames.classes
         self.raw_cxxtype = type
         self.cxxtype = type.get_canonical()
 
@@ -67,18 +62,18 @@ class AbstractTypeConverter(metaclass=ABCMeta):
     def return_output(self, cpp_call: str, **kwargs) -> str:
         """return output"""
 
-    def pysign_type_decl(self, vtype: VarType):
-        """used in stub files,"""
+    def pysign_type_decl(self, is_parameter: bool):
+        """used in stub files"""
         return "Any"
 
 
 class BaseTypeConverter(AbstractTypeConverter):
     def __init__(
-        self, type: CXXType, argname: str, classnames: Set[str], includes: Imports
+        self, type: CXXType, argname: str, typenames: TypeNames, includes: Imports
     ):
         if type.kind in {TypeKind.LVALUEREFERENCE, TypeKind.RVALUEREFERENCE}:
             type = type.pointee
-        super().__init__(type, argname, classnames, includes)
+        super().__init__(type, argname, typenames, includes)
 
     def _matches(self) -> bool:
         return False
@@ -115,8 +110,8 @@ class VoidConverter(BaseTypeConverter):
     def return_output(self, cpp_call: str, **kwargs) -> str:
         return cpp_call
 
-    def pysign_type_decl(self, vtype: VarType):
-        if vtype == VarType.RETURN:
+    def pysign_type_decl(self, is_parameter: bool):
+        if not is_parameter:
             return "None"
         raise NotImplementedError("Unsupported: void as parameter")
 
@@ -144,7 +139,7 @@ class NumericConverter(BaseTypeConverter):
     def _matches(self):
         return self.cxxtype.kind in NUMERIC_TYPEKINDS
 
-    def pysign_type_decl(self, vtype: VarType):
+    def pysign_type_decl(self, is_parameter: bool):
         return NUMERIC_TYPEKINDS[self.cxxtype.kind]
 
 
@@ -158,7 +153,7 @@ class CStringConverter(BaseTypeConverter):
     def input_type_decl(self):
         return "str"
 
-    def pysign_type_decl(self, vtype: VarType):
+    def pysign_type_decl(self, is_parameter: bool):
         return "str"
 
 
@@ -191,7 +186,7 @@ for {self.py_argname}_idx in range(len({self.py_argname})):
     def cpp_call_arg(self):
         return self.cpp_argname
 
-    def pysign_type_decl(self, vtype: VarType):
+    def pysign_type_decl(self, is_parameter: bool):
         return "Iterable[str]"
 
     def return_output(self, cpp_call: str, **kwargs) -> str:
@@ -221,7 +216,7 @@ class FixedSizeArrayConverter(BaseTypeConverter):
     def input_type_decl(self):
         return "object"
 
-    def pysign_type_decl(self, vtype: VarType):
+    def pysign_type_decl(self, is_parameter: bool):
         return "Iterable"
 
 
@@ -232,7 +227,7 @@ class EnumConverter(BaseTypeConverter):
     def return_output(self, cpp_call: str, **kwargs) -> str:
         return f"return {self.cxxtype.plain_name}({cpp_call})"
 
-    def pysign_type_decl(self, vtype: VarType):
+    def pysign_type_decl(self, is_parameter: bool):
         return self.cxxtype.plain_name
 
 
@@ -256,9 +251,9 @@ class NumericPtrConverter(BaseTypeConverter):
     def return_output(self, cpp_call: str, **kwargs) -> str:
         return f"return deref({cpp_call})"
 
-    def pysign_type_decl(self, vtype: VarType):
+    def pysign_type_decl(self, is_parameter: bool):
         pointee_typing = NUMERIC_TYPEKINDS[self.pointee.kind]
-        if vtype == VarType.PARAMETER:
+        if is_parameter:
             return f"np.ndarray[Any, np.dtype[{pointee_typing}]]"
         return pointee_typing
 
@@ -304,7 +299,7 @@ class ClassConverter(BaseTypeConverter):
     def input_type_decl(self):
         return self.cxxtype.plain_name
 
-    def pysign_type_decl(self, vtype: VarType):
+    def pysign_type_decl(self, is_parameter: bool):
         return self.cxxtype.plain_name
 
 
@@ -330,7 +325,7 @@ class ClassPtrConverter(BaseTypeConverter):
     def input_type_decl(self):
         return self.pointee.plain_name
 
-    def pysign_type_decl(self, vtype: VarType):
+    def pysign_type_decl(self, is_parameter: bool):
         return self.pointee.plain_name
 
 
@@ -350,7 +345,7 @@ class ClassPtrPtrConverter(BaseTypeConverter):
     def input_type_decl(self):
         return self.pointee.plain_name
 
-    def pysign_type_decl(self, vtype: VarType):
+    def pysign_type_decl(self, is_parameter: bool):
         return self.pointee.plain_name
 
     def return_output(self, cpp_call: str, **kwargs) -> str:
@@ -388,8 +383,9 @@ class STLConverter(BaseTypeConverter):
     def input_type_decl(self):
         return "object"
 
-    def pysign_type_decl(self, vtype: VarType):
-        return _STL_PYTYPING[self.stl][vtype.value]
+    def pysign_type_decl(self, is_parameter: bool):
+        idx = 0 if is_parameter else 1
+        return _STL_PYTYPING[self.stl][idx]
 
 
 class ClassVectorConverter(STLConverter):
@@ -415,8 +411,8 @@ class ClassVectorConverter(STLConverter):
             cython_argname=self.cpp_argname,
         )
 
-    def pysign_type_decl(self, vtype: VarType):
-        if vtype == VarType.PARAMETER:
+    def pysign_type_decl(self, is_parameter: bool):
+        if is_parameter:
             return f"list[{self.subtype.plain_name}]"
         raise NotImplementedError()
 
@@ -451,11 +447,11 @@ def init_converters(custom_converters: List[type]):
 
 
 def create_type_converter(
-    type: CXXType, argname: str, classnames: Set[str], includes: Imports
+    type: CXXType, argname: str, typenames: TypeNames, includes: Imports
 ) -> AbstractTypeConverter:
     for converter_type in CONVERTERS:
         converter: AbstractTypeConverter = converter_type(
-            type, argname, classnames, includes
+            type, argname, typenames, includes
         )
         if converter.match:
             return converter

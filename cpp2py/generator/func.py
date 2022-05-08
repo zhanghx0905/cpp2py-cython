@@ -1,21 +1,25 @@
 import os
 import re
-from typing import List, Set
+from typing import List
 
 from ..config import Imports
-from ..parser import CXXType, Variable
-from ..type_conversion import BaseTypeConverter, VarType, create_type_converter
-from ..utils import camel_to_snake, render
+from ..cxxtypes import CXXType, TypeNames
+from ..parser import Variable
+from ..type_conversion import BaseTypeConverter, create_type_converter
+from ..utils import PostInitMeta, camel_to_snake, render
 
 # member definitions
 FUNC_CALL = "cpp.%(name)s(%(call_args)s)"
 CONSTRUCTOR_CALL = "self.thisptr = new cpp.%(class_name)s(%(call_args)s)"
 METHOD_CALL = "self.thisptr.%(name)s(%(call_args)s)"
 STATIC_METHOD_CALL = "cpp.%(class_name)s.%(name)s(%(call_args)s)"
-SETTER_CALL = "self.thisptr.%(name)s = %(call_args)s"
-GETTER_CALL = "self.thisptr.%(name)s"
+SETTER_CALL = "%(prefix)s.%(name)s = %(call_args)s"
+GETTER_CALL = "%(prefix)s.%(name)s"
+
 PYSIGN = "def %(name)s(%(args)s) -> %(ret_type)s: ..."
-_VOID = object()
+
+VOID = object()
+AUTO = object()
 
 
 class _VoidConverter(BaseTypeConverter):
@@ -25,15 +29,13 @@ class _VoidConverter(BaseTypeConverter):
     def return_output(self, cpp_call: str, **kwargs) -> str:
         return cpp_call
 
-    def pysign_type_decl(self, vtype: VarType):
+    def pysign_type_decl(self, is_parameter):
         return "None"
 
 
-class PostInitMeta(type):
-    def __call__(cls, *args, **kwargs):
-        obj = type.__call__(cls, *args, **kwargs)
-        obj.__post_init__()
-        return obj
+class _AutoConverter(BaseTypeConverter):
+    def __init__(self):
+        ...
 
 
 class FunctionGenerator(metaclass=PostInitMeta):
@@ -42,7 +44,7 @@ class FunctionGenerator(metaclass=PostInitMeta):
         name: str,
         args: List[Variable],
         ret_type: CXXType,
-        typenames: Set[str],
+        typenames: TypeNames,
         includes: Imports,
     ) -> None:
         def get_converter(type: CXXType, py_argname: str):
@@ -52,10 +54,12 @@ class FunctionGenerator(metaclass=PostInitMeta):
         self.args = args
 
         self.arg_converters = [get_converter(arg.type, arg.name) for arg in args]
-        if ret_type == _VOID:
+        if ret_type == VOID:
             self.ret_converter = _VoidConverter()
+        elif ret_type == AUTO:
+            self.ret_converter = _AutoConverter()
         else:
-            self.ret_converter = get_converter(ret_type, "")
+            self.ret_converter = get_converter(ret_type, name)
         self.ret_copy = True
 
     def __post_init__(self):
@@ -90,7 +94,7 @@ class FunctionGenerator(metaclass=PostInitMeta):
         cpp_call = self._cpp_call(cpp_call_args)
 
         return render(
-            "function",
+            "impl/function",
             **{
                 "name": self._function_name(),
                 "def_prefix": self._function_prefix(),
@@ -104,7 +108,7 @@ class FunctionGenerator(metaclass=PostInitMeta):
 
     def _pysign_input_args(self):
         args = [
-            f"{tc.py_argname}: {tc.pysign_type_decl(VarType.PARAMETER)}"
+            f"{tc.py_argname}: {tc.pysign_type_decl(True)}"
             for tc in self.arg_converters
         ]
         # handle default values
@@ -119,7 +123,7 @@ class FunctionGenerator(metaclass=PostInitMeta):
         return PYSIGN % {
             "name": self._function_name(),
             "args": self._pysign_input_args(),
-            "ret_type": self.ret_converter.pysign_type_decl(VarType.RETURN),
+            "ret_type": self.ret_converter.pysign_type_decl(False),
         }
 
 
@@ -132,7 +136,7 @@ class MethodGenerator(FunctionGenerator):
         name: str,
         args: List[Variable],
         ret_type: CXXType,
-        typenames: Set[str],
+        typenames: TypeNames,
         includes: Imports,
         class_name: str,
     ) -> None:
@@ -187,11 +191,11 @@ class ConstructorGenerator(MethodGenerator):
     def __init__(
         self,
         args: List[Variable],
-        typenames: Set[str],
+        typenames: TypeNames,
         includes: Imports,
         class_name: str,
     ) -> None:
-        super().__init__("__init__", args, _VOID, typenames, includes, class_name)
+        super().__init__("__init__", args, VOID, typenames, includes, class_name)
 
     def _function_prefix(self):
         return "def"
@@ -208,18 +212,24 @@ class GetterGenerator(MethodGenerator):
         self,
         field_name: str,
         field_type: CXXType,
-        typenames: Set[str],
+        typenames: TypeNames,
         includes: Imports,
         class_name: str,
+        prefix: str,
     ) -> None:
         super().__init__(field_name, [], field_type, typenames, includes, class_name)
         self.ret_copy = False
+        self.prefix = prefix
 
     def _function_prefix(self):
         return "def"
 
+    def _function_name(self):
+        return self.name
+
     def _cpp_call(self, _args: str):
         return GETTER_CALL % {
+            "prefix": self.prefix,
             "name": self.name,
         }
 
@@ -229,24 +239,30 @@ class SetterGenerator(MethodGenerator):
         self,
         field_name: str,
         field_type: CXXType,
-        typenames: Set[str],
+        typenames: TypeNames,
         includes: Imports,
         class_name: str,
+        prefix: str,
     ) -> None:
         super().__init__(
             field_name,
             [Variable(f"_{field_name}", type=field_type)],
-            _VOID,
+            VOID,
             typenames,
             includes,
             class_name,
         )
+        self.prefix = prefix
 
     def _function_prefix(self):
         return "def"
 
+    def _function_name(self):
+        return self.name
+
     def _cpp_call(self, args: str):
         return SETTER_CALL % {
+            "prefix": self.prefix,
             "name": self.name,
             "call_args": args,
         }

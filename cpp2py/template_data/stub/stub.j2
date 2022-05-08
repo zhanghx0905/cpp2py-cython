@@ -6,9 +6,8 @@ from enum import Enum
 import numpy as np
 
 
-{% for constant in constants -%}
-{{ constant }}
-{% endfor -%}
+{{ globals }}
+
 {% for enum in enums %}
 class {{ enum.name }}(Enum):
 {%- for constant in enum.constants %}

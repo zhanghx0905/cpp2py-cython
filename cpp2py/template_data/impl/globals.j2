@@ -1,0 +1,12 @@
+cdef class _{{ name }}:
+{% for var in vars %}
+    @property
+    {{ var["getter"]|indent(4) }}
+{% if "setter" in var %}
+    @{{ var["name"] }}.setter
+    {{ var["setter"]|indent(4) }}
+{% endif -%}
+{% endfor %}
+    pass
+
+{{ name }} = _{{ name }}()

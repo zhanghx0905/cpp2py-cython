@@ -9,15 +9,13 @@ def catch_type(literal: object):
 
 class StubGenerator(BaseImplGenerator):
     def generate(self) -> str:
-        constants = [
-            f"{macro.name}: {catch_type(macro.literal)}" for macro in self.macros
-        ]
-        functions, classes = functions, classes = super()._generate_func_class(
-            lambda generator: getattr(generator, "pysign"), "class_stub"
+        self.template_dir = "stub"
+        globals, functions, classes = super()._generate_func_class(
+            lambda generator: getattr(generator, "pysign")
         )
-        return render(
+        return self.render(
             "stub",
-            constants=constants,
+            globals=globals,
             enums=self.enums,
             functions=functions,
             classes=classes,
