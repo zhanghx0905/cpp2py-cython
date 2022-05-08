@@ -23,10 +23,12 @@ public:
 
     int operator%(int a) { return 5 % a; }
 
-    bool operator&&(bool b) { return true && b; }
+    int operator&(int a) { return v & a; }
 
-    bool operator||(bool b) { return false || b; }
-
+    int operator|(int a) { return v | a; }
+    int operator~() { return ~v; }
+    bool operator<(int a) { return v < a; }
+    bool operator>(int a) { return v > a; }
     Operators& operator+=(int a)
     {
         v += a;
@@ -57,15 +59,15 @@ public:
         return *this;
     }
 
-    Operators& operator&=(bool b)
+    Operators& operator&=(int b)
     {
-        this->b &= b;
+        this->v &= b;
         return *this;
     }
 
-    Operators& operator|=(bool b)
+    Operators& operator|=(int b)
     {
-        this->b |= b;
+        this->v |= b;
         return *this;
     }
 };

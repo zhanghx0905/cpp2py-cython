@@ -59,10 +59,12 @@ class Method(Function):
     is_const: bool = False
     is_static: bool = False
     is_pure_virtual: bool = False
+    is_operator: bool = False
 
     def __post_init__(self):
         super().__post_init__()
         if (pyname := OPERATORS_MAPPER.get(self.name, None)) is not None:
+            self.is_operator = True
             self.decl = f'{pyname} "{self.name}"'
             self.name = pyname
 
