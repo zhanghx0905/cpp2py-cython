@@ -246,7 +246,7 @@ class SetterGenerator(MethodGenerator):
     ) -> None:
         super().__init__(
             field_name,
-            [Variable(f"_{field_name}", type=field_type)],
+            [Variable(field_name, type=field_type)],
             VOID,
             typenames,
             includes,

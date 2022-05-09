@@ -1,7 +1,10 @@
 class A {
 public:
-    static int plus1(int a) { return a + 1; }
+    static int count;
+    static int getCount() { return count; }
 };
+
+int A::count = 0;
 
 namespace MyNamespace {
 

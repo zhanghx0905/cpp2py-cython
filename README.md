@@ -64,7 +64,8 @@ options:
 - Global vars and literal macros are wrapped in the `cvar` object.
 - C/C++ enums are mapped to Python enums (enum.Enum).
 - C/C++ class/struct/union are mapped to Cython extension types.
-  - Methods/Static Methods are wrapped, data members are mapped to Python property with getter and setter (if the field is mutable) 
+  - Methods/Static Methods are wrapped
+  - data members are mapped to Python property with getter and setter (if the field is mutable), static data members are wrapped like global variables 
   - Single & Public inheritance
   - Abstract class
   - Operator overloading

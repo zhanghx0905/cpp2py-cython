@@ -51,3 +51,9 @@ def camel_to_snake(argname: str):
 
 def print_header(text: str):
     print(os.linesep.join((f"+{'=' * 78}+", f"|{text.ljust(78)}|", f"+{'=' * 78}+")))
+
+
+def removeprefix(txt: str, prefix: str):
+    if txt.startswith(prefix):
+        return txt[len(prefix) :]
+    return txt

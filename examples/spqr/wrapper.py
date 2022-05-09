@@ -1,41 +1,45 @@
+import os
+import re
 from cpp2py import (
     Config,
-    make_cython_extention,
     VoidPtrConverter,
 )
-
+from cpp2py.main import run_setup, write_files, make_wrapper
 
 class DataConverter(VoidPtrConverter):
     def _matches(self):
-        return super()._matches() and self.py_argname == "_x"
+        return super()._matches() and self.py_argname == "x"
 
     def real_type(self) -> str:
         return "double"
 
 
 class IndexConverter(VoidPtrConverter):
+    def _matches(self):
+        return super()._matches() and self.py_argname in {"p", "i"}
+
     def real_type(self) -> str:
         return "long"
 
 
+libdir = "/usr/include/suitesparse"
+headers = [
+    os.path.join(libdir, f)
+    for f in ("cholmod.h", "cholmod_core.h", "SuiteSparseQR_C.h", "SuiteSparseQR_definitions.h")
+]
+
 config = Config(
-    ["spqr.h"],
-    # build=False,
-    incdirs=["/usr/include/suitesparse"],
+    headers,
+    modulename="spqr",
+    incdirs=[libdir],
     libraries=["cholmod", "spqr"],
     registered_converters=[DataConverter, IndexConverter],
     generate_stub=True,
-    clear_files=False,
+    cleanup=False,
+    # build=False,
 )
 
-
-def before_build():
-    with open(f"{config.decl_filename}.pxd", "r+") as f:
-        content = f.read().replace("spqr.h", "SuiteSparseQR_C.h")
-        f.seek(0)
-        f.write(content)
-
-    additional_impls = '''
+additional_impl = '''
 
 from libc.stdlib cimport malloc
 cimport numpy as np
@@ -77,18 +81,19 @@ cpdef suite_sparse_qr_c_qr(int ordering, double tol, long econ, cholmod_sparse_s
     if c_E != NULL:
         E = np.PyArray_SimpleNewFromData(1, [A.ncol], np.NPY_INT64, deref(c_E))
     return E, rank
-
-    '''
-
-    with open("spqr.pyx", "a") as f:
-        f.write(additional_impls)
+'''
 
 
-config.before_build_handlers = before_build
-
+config.additional_impls = additional_impl
 
 def build():
-    make_cython_extention(config)
+    ret = make_wrapper(config)
+    ret.header_content = re.sub(r'".+\.h"', '"SuiteSparseQR_C.h"', ret.header_content)
+    write_files(ret)
+    run_setup()
+
+
+
 
 if __name__ == "__main__":
     build()

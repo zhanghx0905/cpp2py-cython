@@ -1,13 +1,7 @@
-{% if cppdecls %}
-cdef extern from "{{ filename }}" namespace "{{ namespace }}":
-{% for decl in cppdecls %}
-    {{ decl | indent(4)}}
-{% endfor %}
-{%- endif %}
-
-{% if cdecls -%}
-cdef extern from "{{ filename }}":
-{% for decl in cdecls %}
+{% if decls %}
+cdef extern from "{{ filename }}"
+{%-if cppnamespace %} namespace "{{ cppnamespace }}"{%- endif -%}:
+{% for decl in decls %}
     {{ decl | indent(4)}}
 {% endfor %}
 {%- endif %}

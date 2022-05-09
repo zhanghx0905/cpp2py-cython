@@ -47,24 +47,27 @@ def make_wrapper(config: Config):
     if not all(os.path.exists(path) for path in chain(config.incdirs, config.sources)):
         raise ValueError("Some include directories or source files do not exist.")
 
+    pxd_header_name = f"{config.modulename}_header"
     init_converters(config.registered_converters)
-    includes = Imports(config)
-    parse_ret = parse(config.headers, config.incdirs, config.encoding, includes)
+    includes = Imports(pxd_header_name)
+    parse_ret = parse(config, includes)
 
     postprocessor = Postprocessor(parse_ret, includes, config)
     process_ret = postprocessor.generate_output()
 
     # generate PXD
     decl_generator = DeclGenerator(parse_ret)
-    pxd_content = decl_generator.generate() + config.export_declaration()
+    pxd_content = decl_generator.generate()
 
     # generate PYX
     impl_generator = ImplGenerator(process_ret, config)
     pyx_content = impl_generator.generate()
 
     # add modules import
-    pxd_content = includes.declarations_import() + pxd_content
-    pyx_content = includes.implementations_import() + pyx_content
+    pxd_content = includes.declarations_import() + pxd_content + config.additional_decls
+    pyx_content = (
+        includes.implementations_import() + pyx_content + config.additional_impls
+    )
 
     # generate setup
     sourcedir = os.path.relpath(".", start=config.target)
@@ -86,16 +89,17 @@ def make_wrapper(config: Config):
         pyx_content,
         f"{config.modulename}.pyx",
         pxd_content,
-        f"{config.decl_filename}.pxd",
+        f"{pxd_header_name}.pxd",
         setup_conetnt,
-        f"{config.setup_filename}.py",
+        config.setup_filename,
     )
 
     # generate PYI (optional)
     if config.generate_stub:
         results.stub_name = f"{config.modulename}.pyi"
         results.stub_content = black.format_str(
-            StubGenerator(process_ret, config).generate(), mode=black.FileMode(is_pyi=True)
+            StubGenerator(process_ret, config).generate(),
+            mode=black.FileMode(is_pyi=True),
         )
 
     if config.verbose >= 1:
@@ -121,14 +125,13 @@ def run_setup(setup_name: str = "setup.py"):
 def make_cython_extention(config: Config):
     results = make_wrapper(config)
     write_files(results, config.target)
-    config.before_build_handlers()
     if not config.build:
         return
     cwd = os.getcwd()
     os.chdir(config.target)
-    run_setup()
+    run_setup(config.setup_filename)
     os.chdir(cwd)
-    if config.clear_files:
+    if config.cleanup:
         targets = [
             results.source_name,
             results.header_name,

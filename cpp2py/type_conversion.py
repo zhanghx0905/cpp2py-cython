@@ -198,7 +198,7 @@ class FixedSizeArrayConverter(BaseTypeConverter):
         if self.cxxtype.kind == TypeKind.CONSTANTARRAY:
             self.size = self.cxxtype.type.element_count
             self.ele_type = self.cxxtype.ele_type
-            return self.ele_type.plain_name not in self.classnames
+            return self.ele_type.kind in NUMERIC_TYPEKINDS
         return False
 
     def python_to_cpp(self):

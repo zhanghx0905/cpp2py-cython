@@ -10,12 +10,21 @@ FUNC_DECL = """%(ret_type)s %(decl)s(%(args)s) except +"""
 CONSTRUCTOR_DECL = "%(class_name)s(%(args)s) except +"
 VAR_DECL = "%(type)s %(decl)s"
 ARG_DECL = "%(type)s %(name)s"
-MACRO_DECL = """cdef enum:
-    %(decl)s"""
+
+
+# workaround for function pointer and pointer array
+def _handle_spcase(arg: Variable, template):
+    if "(*)" in arg.type.cppname:
+        idx = arg.type.cppname.find("(*)") + 2
+        return arg.type.name[:idx] + arg.name + arg.type.name[idx:]
+    if "*[" in arg.type.cppname:
+        idx = arg.type.cppname.find("*[") + 1
+        return f"{arg.type.name[:idx]} {arg.name}{arg.type.name[idx:]}"
+    return template % arg.__dict__
 
 
 def _gen_args_decl(func: Function):
-    return ", ".join(ARG_DECL % arg.__dict__ for arg in func.args)
+    return ", ".join(_handle_spcase(arg, ARG_DECL) for arg in func.args)
 
 
 def split_symbols(objects: ParseResult):
@@ -42,7 +51,7 @@ def process_enum(enum: Enum):
 
 
 def process_variable(var: Variable):
-    return VAR_DECL % var.__dict__
+    return _handle_spcase(var, VAR_DECL)
 
 
 def process_typedef(typedef: Typedef):
@@ -56,12 +65,16 @@ def process_function(func: Function):
     }
 
 
+_MACRO_TYPES = {int: "int", str: "const char *", float: "double"}
+
+
 def process_macro(macro: Macro):
-    return MACRO_DECL % macro.__dict__
+    assert type(macro.literal) in _MACRO_TYPES
+    return VAR_DECL % {"decl": macro.decl, "type": _MACRO_TYPES[type(macro.literal)]}
 
 
 def process_class(class_: Class):
-    fields = [VAR_DECL % field.__dict__ for field in class_.fields]
+    fields = [_handle_spcase(field, VAR_DECL) for field in class_.fields]
     ctors = [
         CONSTRUCTOR_DECL % {"class_name": class_.name, "args": _gen_args_decl(ctor)}
         for ctor in class_.ctors
@@ -98,7 +111,12 @@ class DeclGenerator:
 
     def generate(self):
         outputs = []
+
+        def drender(**kwargs):
+            return render("decl/declarations", **kwargs)
+
         for key, group in self.objects:
+            typedefs = []
             cppdecls = []
             cdecls = []
 
@@ -106,17 +124,31 @@ class DeclGenerator:
                 gen = _SYMBOL_HANDLER[symbol.__class__](symbol)
                 if symbol.__class__ is Macro:
                     cdecls.append(gen)
+                elif symbol.__class__ is Typedef:
+                    typedefs.append(gen)
                 else:
                     cppdecls.append(gen)
-            outputs.append(
-                render(
-                    "decl/declarations",
-                    **{
-                        "filename": key[0],
-                        "namespace": key[1],
-                        "cppdecls": cppdecls,
-                        "cdecls": cdecls,
-                    },
-                )
+            # typedef must generate first
+            outputs.insert(
+                0,
+                drender(
+                    filename=key[0],
+                    cppnamespace=key[1],
+                    decls=typedefs,
+                ),
             )
+            outputs.extend(
+                [
+                    drender(
+                        filename=key[0],
+                        cppnamespace=key[1],
+                        decls=cppdecls,
+                    ),
+                    drender(
+                        filename=key[0],
+                        decls=cdecls,
+                    ),
+                ]
+            )
+
         return os.linesep.join(outputs)

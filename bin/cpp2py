@@ -22,7 +22,11 @@ def parse_args():
         "--outdir", type=str, nargs="?", default=".", help="output directory"
     )
     parser.add_argument(
-        "--incdirs", type=str, nargs="*", default=[], help="Include directories"
+        "--incdirs",
+        type=str,
+        nargs="*",
+        default=[],
+        help="Include directories for clang parser",
     )
     parser.add_argument(
         "--verbose", "-v", action="count", default=0, help="verbosity level"
@@ -31,6 +35,12 @@ def parse_args():
         "--clear",
         action="store_true",
         help="clear intermediate files after building successfully",
+    )
+    parser.add_argument(
+        "--globals",
+        type=str,
+        default="cvar",
+        help="name of the object that holds global variables and litral macros",
     )
     parser.add_argument("--nobuild", action="store_true")
     parser.add_argument("--genstub", action="store_true")
@@ -42,15 +52,16 @@ if __name__ == "__main__":
     args = parse_args()
     os.makedirs(args.outdir, exist_ok=True)
     config = Config(
-        args.header,
-        args.modname,
-        args.outdir,
-        args.sources,
-        args.incdirs,
+        headers=args.header,
+        modulename=args.modname,
+        target=args.outdir,
+        sources=args.sources,
+        incdirs=args.incdirs,
         encoding=args.encoding,
         verbose=args.verbose,
         build=not args.nobuild,
-        clear_files=args.clear,
+        cleanup=args.clear,
+        global_vars=args.globals,
         generate_stub=args.genstub,
     )
     make_cython_extention(config)

@@ -68,7 +68,7 @@ cdef extern from "Eigen/Dense" namespace "Eigen":
 
     config = Config()
     config.registered_converters.append(EigenConverter)
-    config.add_declaration(eigen_vector_decl)
+    config.additional_decls = eigen_vector_decl
 
     @cpp2py_tester("eigen.hpp", config=config, incdirs=EIGEN3_INCDIR)
     def run():

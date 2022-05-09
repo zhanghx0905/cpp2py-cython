@@ -6,9 +6,15 @@ from typing import Set
 from clang.cindex import Type, TypeKind
 
 from .config import Imports
-from .utils import remove_namespace
+from .utils import remove_namespace, removeprefix
 
 _PTR_TYPEKIND = {TypeKind.POINTER, TypeKind.LVALUEREFERENCE, TypeKind.RVALUEREFERENCE}
+
+
+def _remove_useless_prefix(typename: str):
+    for prefix in ("class ", "struct ", "enum ", "union "):
+        typename = removeprefix(typename, prefix)
+    return typename
 
 
 @dataclass
@@ -34,7 +40,7 @@ class CXXType:
     @classmethod
     def build(cls, type: Type, includes: Imports, cache: dict[str, CXXType]) -> CXXType:
         def recursive_build(type: Type):
-            cppname = type.spelling
+            cppname = _remove_useless_prefix(type.spelling)
             if cppname in cache:
                 return cache[cppname]
             includes.add_stl(cppname)
@@ -60,7 +66,7 @@ class CXXType:
             if type != type.get_canonical():
                 canonical = recursive_build(type.get_canonical())
 
-            name = remove_namespace(type.spelling).replace("<", "[").replace(">", "]")
+            name = remove_namespace(cppname).replace("<", "[").replace(">", "]")
             plain_name = (
                 name.replace("const ", "")
                 .replace("*const", "*")

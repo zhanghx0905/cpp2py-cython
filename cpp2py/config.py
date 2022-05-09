@@ -1,7 +1,7 @@
 import os
 import re
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional
+from typing import List, Optional
 
 
 @dataclass
@@ -9,31 +9,30 @@ class Config:
     headers: List[str] = field(default_factory=list)
     modulename: Optional[str] = None
     target: str = "."
-    sources: List[str] = field(default_factory=list)
+
+    # libclang conf
     incdirs: List[str] = field(default_factory=list)
-    compiler_flags: tuple = ("-O3",)
     encoding: str = "utf8"
-    verbose: int = 0
-    build: bool = True
-    clear_files: bool = True
-    generate_stub: bool = True
-    decl_filename: str = "_declarations"
-    setup_filename: str = "setup"
+    libclang_flags: tuple = ()
 
-    global_vars: str = "cvar"
-
-    before_build_handlers: Callable[..., None] = lambda: None
-    registered_converters: List[type] = field(default_factory=list)
-    additional_declarations: List[str] = field(default_factory=list)
-
+    # cython conf
+    sources: List[str] = field(default_factory=list)
     libraries: List[str] = field(default_factory=list)
     library_dirs: List[str] = field(default_factory=list)
+    compiler_flags: tuple = ("-O3",)
 
-    def add_declaration(self, decl: str):
-        self.additional_declarations.append(decl)
+    # cpp2py behavior conf
+    global_vars: str = "cvar"
+    registered_converters: List[type] = field(default_factory=list)
+    additional_decls: str = ""
+    additional_impls: str = ""
 
-    def export_declaration(self):
-        return os.linesep.join(self.additional_declarations)
+    build: bool = True
+    cleanup: bool = True
+    generate_stub: bool = True
+
+    setup_filename: str = "setup.py"
+    verbose: int = 0
 
     def add_library_dir(self, library_dir: str):
         self.library_dirs.append(library_dir)
@@ -71,8 +70,8 @@ _STL_PATTERN = re.compile(r"std::(\w+)")
 class Imports:
     """Cython Modules need to be imported from numpy/libc/libcpp/..."""
 
-    def __init__(self, config: Config):
-        self.config = config
+    def __init__(self, header_name: str):
+        self.header_name = header_name
         self.mods = {mod: False for mod in _OTHER_MODS_DECL}
         self.stl = {container: False for container in _STL_MODES_DECL}
 
@@ -99,5 +98,5 @@ class Imports:
         includes += [
             _OTHER_MODS_DECL[name] for name, cimport in self.mods.items() if cimport
         ]
-        includes += ["cimport _declarations as cpp"]
+        includes += [f"cimport {self.header_name} as cpp"]
         return os.linesep.join(includes)

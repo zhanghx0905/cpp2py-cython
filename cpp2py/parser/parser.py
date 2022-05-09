@@ -1,6 +1,6 @@
 import os
 import re
-from itertools import count
+from itertools import count, tee
 from typing import Dict, List
 from warnings import warn
 
@@ -8,7 +8,7 @@ from clang import cindex
 from clang.cindex import Cursor, CursorKind
 from more_itertools import ilen, last, partition, split_at
 
-from ..config import Imports
+from ..config import Config, Imports
 from ..cxxtypes import CXXType
 from ..utils import remove_namespace
 from .libclang import CLANG_INCDIR
@@ -44,10 +44,11 @@ def _check_diagnostics(diagnostics: List[cindex.Diagnostic]):
         lambda d: d.severity <= cindex.Diagnostic.Warning,
         diagnostics,
     )
-    for dig in non_critical:
-        warn(f"Diagnostic: {dig}")
-    if ilen(critical):
-        raise ClangError(critical)
+    for diag in non_critical:
+        warn(f"Diagnostic: {diag}")
+    c1, c2 = tee(critical, 2)
+    if ilen(c1):
+        raise ClangError(c2)
 
 
 def is_ignored_method(cur: Cursor):
@@ -124,7 +125,10 @@ class ClangParser:
                 self._process_variable(cur, namespace)
 
     def _process_variable(self, cur: Cursor, namespace: str):
+        if cur.semantic_parent != cur.lexical_parent:
+            return
         type = self.build_cxxtype(cur.type)
+
         var = Variable(
             name=cur.spelling,
             filename=self.get_filename(cur),
@@ -197,15 +201,15 @@ class ClangParser:
         set_when_missing(self.objects.enums, enum)
 
     def _process_class(self, cur: Cursor):
-        namespace, name = split_namespace(cur.type.spelling)
+        class_namespace, class_name = split_namespace(cur.type.spelling)
         class_ = Class(
-            name=name,
+            name=class_name,
             filename=self.get_filename(cur),
-            namespace=namespace,
+            namespace=class_namespace,
             rtype=RecordType.build(cur.kind),
             is_abstract=cur.is_abstract_record(),
         )
-
+        child_namespace = cur.type.spelling
         for ac in cur.get_children():
             if ac.kind == CursorKind.CXX_BASE_SPECIFIER:
                 if ac.access_specifier != cindex.AccessSpecifier.PUBLIC:
@@ -229,6 +233,13 @@ class ClangParser:
                 ):
                     continue
                 self._process_field(ac, class_)
+            elif ac.kind == CursorKind.VAR_DECL:
+                if (
+                    ac.access_specifier != cindex.AccessSpecifier.PUBLIC
+                    or ac.is_anonymous()
+                ):
+                    continue
+                self._process_variable(ac, child_namespace)
             elif ac.kind == CursorKind.ENUM_DECL:
                 if ac.is_anonymous():
                     continue
@@ -257,7 +268,7 @@ class ClangParser:
         if is_ignored_method(cur):
             return
         if is_operator(cur.spelling) and cur.spelling not in OPERATORS_MAPPER:
-            warn(f"{cur.spelling} is not supported.")
+            warn(f"{cur.location} {cur.spelling} is not supported.")
             return
         arg_counter = count()
         func = Method(
@@ -319,24 +330,24 @@ class ClangParser:
         set_when_missing(self.objects.macros, m)
 
 
-def parse(paths: List[str], include_paths: List[str], encoding: str, includes: Imports):
-
+def parse(config: Config, includes: Imports):
     args = [
         "-Wno-pragma-once-outside-header",
         f"-I{CLANG_INCDIR}",
-        *[f"-I{include}" for include in include_paths],
+        *[f"-I{include}" for include in config.incdirs],
+        *[flag for flag in config.libclang_flags],
     ]
 
-    headers = [path.split(os.sep)[-1] for path in paths]
+    headers = [path.split(os.sep)[-1] for path in config.headers]
     dummy_name = "./__dummy.cxx"
     dummy_content = os.linesep.join(f'#include "{h}"' for h in headers)
     # https://stackoverflow.com/questions/60311504/clang-cindex-cant-find-header-in-unsaved-files
     headers = [f"./{h}" for h in headers]
-    headers_mapper = dict(zip(headers, paths))
+    headers_mapper = dict(zip(headers, config.headers))
 
     unsaved_files = [[dummy_name, dummy_content]]
     for header, path in headers_mapper.items():
-        with open(path, encoding=encoding) as f:
+        with open(path, encoding=config.encoding) as f:
             unsaved_files.append([header, f.read()])
 
     idx = cindex.Index.create()

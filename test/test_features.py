@@ -128,11 +128,13 @@ def test_enum():
     assert MyEnumClass().enum_to_string(MyEnum.THIRDOPTION) == "third"
 
 
-@cpp2py_tester("staticmethod.hpp")
-def test_static_method():
-    from staticmethod import A, B
+@cpp2py_tester("staticattr.hpp")
+def test_static_attr():
+    from staticattr import A, B, cvar
 
-    assert A.plus1(1) == 2
+    assert A.get_count() == cvar.count
+    cvar.count = 2
+    assert A.get_count() == 2
     assert B.plus2(1) == 3
 
 
