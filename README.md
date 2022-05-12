@@ -34,31 +34,50 @@ Then this tool is for you.
 
 ## Usage
 
-TODO: Add more details
-
 ```
-usage: cpp2py [-h] [--sources [SOURCES ...]] [--modname [MODNAME]] [--outdir [OUTDIR]] [--incdirs [INCDIRS ...]]
-              [--verbose] [--clear] [--nobuild] [--genstub] [--encoding ENCODING]
+usage: cpp2py [-h] [--sources [SOURCES [SOURCES ...]]] [--modname [MODNAME]] [--outdir [OUTDIR]] [--incdirs [INCDIRS [INCDIRS ...]]]
+              [--globals GLOBALS] [--nobuild] [--cleanup] [--genstub] [--encoding ENCODING] [--verbose]
               header [header ...]
 
 positional arguments:
   header                C++ header files
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
-  --sources [SOURCES ...]
+  --sources [SOURCES [SOURCES ...]]
                         C++ implementation files
   --modname [MODNAME]   Name of the generated extension module
   --outdir [OUTDIR]     output directory
-  --incdirs [INCDIRS ...]
-                        Include directories
-  --verbose, -v         verbosity level
-  --clear               clear intermediate files after building successfully
-  --nobuild
-  --genstub             generate .pyi stub file
-  --encoding ENCODING
+  --incdirs [INCDIRS [INCDIRS ...]]
+                        Include directories for clang parser
+  --globals GLOBALS     name of the object that holds global variables and litral macros
+  --nobuild             only generate code instead of building simultaneously
+  --cleanup             clear intermediate files after building successfully
+  --genstub             generate stub file (.pyi)
+  --encoding ENCODING   encoding of input files
+  --verbose, -v         verbosity leve
 ```
+Or use Python API:
 
+```python
+from cpp2py import make_cython_extention, Config
+
+make_cython_extention(
+    Config(
+        headers=["src1/Point.h", "src1/Strategy.h"],
+        modulename="ai1",
+        sources=[
+            "src1/board.cpp",
+            "src1/Judge.cpp",
+            "src1/Strategy.cpp",
+            "src1/uct.cpp",
+        ],
+        encoding="gbk",
+    )
+)
+
+import ai1
+```
 ## Features
 
 - Global vars and literal macros are wrapped in the `cvar` object.
