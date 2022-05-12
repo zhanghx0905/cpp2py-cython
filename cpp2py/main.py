@@ -10,7 +10,7 @@ from .generator import DeclGenerator, ImplGenerator, StubGenerator
 from .parser import parse
 from .postprocess import Postprocessor
 from .type_conversion import init_converters
-from .utils import print_header, render, suppress_stdout
+from .utils import render, suppress_stdout
 
 
 @dataclass
@@ -102,10 +102,6 @@ def make_wrapper(config: Config):
             mode=black.FileMode(is_pyi=True),
         )
 
-    if config.verbose >= 1:
-        for file, content in results:
-            print_header(file)
-            print(content)
     return results
 
 

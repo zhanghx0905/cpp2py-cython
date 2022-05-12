@@ -16,6 +16,7 @@ from .generator.func import (
     StaticMethodGenerator,
 )
 from .parser import Class, Function, Macro, Method, ParseResult, Variable
+from .utils import toposort
 
 
 @dataclass
@@ -64,39 +65,30 @@ class Postprocessor:
         return self.output
 
     def _handle_inheritance(self):
-        """Copies methods from base classes to subclasses."""
+        """Copies methods/fields from base classes to subclasses."""
         class_dict = {node.fullname: node for node in self.objects.classes.values()}
-        # class with out subclasses
-        leaf_names = set(class_dict.keys()) - {
-            clas.base for clas in class_dict.values()
+        dep_map = {
+            class_.fullname: {class_dict[name].fullname for name in class_.bases}
+            for class_ in self.objects.classes.values()
         }
+        toposets = toposort(dep_map)
 
-        def _copy_base_methods(leaf_class: Class):
-            base = leaf_class.base
-            chains: List[Class] = [leaf_class]
-            while base is not None and base in class_dict:
-                class_ = class_dict[base]
-                chains.append(class_)
-                base = class_.base
-            chains.reverse()
-
-            base_methods = chains[0].methods
-            base_fields = chains[0].fields
-            for class_ in chains[1:]:
-                for method_name, methods in base_methods.items():
-                    if method_name not in class_.methods.keys():
+        def _copy_from_supers(leaf_class: Class):
+            supers = dep_map[leaf_class.fullname]
+            for superclass_name in supers:
+                superclass = class_dict[superclass_name]
+                for method_name, methods in superclass.methods.items():
+                    if method_name not in leaf_class.methods.keys():
                         # copy the method from base to subclass
-                        class_.methods[method_name].extend(methods)
-                class_fields = {field.name for field in class_.fields}
-                for field in base_fields:
+                        leaf_class.methods[method_name].extend(methods)
+                class_fields = {field.name for field in leaf_class.fields}
+                for field in superclass.fields:
                     if field.name not in class_fields:
-                        class_.fields.append(field)
+                        leaf_class.fields.append(field)
 
-                base_methods = class_.methods
-                base_fields = class_.fields
-
-        for leaf_name in leaf_names:
-            _copy_base_methods(class_dict[leaf_name])
+        for tset in toposets:
+            for leaf_class_name in tset:
+                _copy_from_supers(class_dict[leaf_class_name])
 
     def _bind_overloaded_functions(
         self, funcs: List[Function], generator_builder: Callable[..., FunctionGenerator]

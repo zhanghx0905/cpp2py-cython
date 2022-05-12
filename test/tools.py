@@ -10,7 +10,7 @@ from cpp2py.main import make_wrapper, run_setup, write_files
 
 TESTCASES_PATH = os.path.join(os.path.dirname(__file__), "testcases")
 sys.path.insert(0, os.getcwd())
-SETUPPY_NAME = "setup_test"
+SETUPPY_NAME = "setup_test.py"
 
 
 def remove_files(filenames):
@@ -36,6 +36,7 @@ def cpp2py_tester(
     headers,
     modulename=None,
     incdirs=None,
+    sources=None,
     cleanup=True,
     warnmsg=None,
     config: Optional[Config] = None,
@@ -46,6 +47,9 @@ def cpp2py_tester(
             nonlocal incdirs
             if incdirs is None:
                 incdirs = []
+            nonlocal sources
+            if sources is None:
+                sources = []
             args = {}
             if config is not None:
                 args.update(config.__dict__)
@@ -54,6 +58,7 @@ def cpp2py_tester(
                     "headers": full_path(headers),
                     "modulename": modulename,
                     "incdirs": full_path(incdirs),
+                    "sources": full_path(sources),
                     "compiler_flags": ("-O0",),
                     "setup_filename": SETUPPY_NAME,
                     "generate_stub": False,  # True,

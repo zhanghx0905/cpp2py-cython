@@ -209,19 +209,16 @@ class ClangParser:
             rtype=RecordType.build(cur.kind),
             is_abstract=cur.is_abstract_record(),
         )
+        self._process_class_children(cur, class_)
+        set_when_missing(self.objects.classes, class_)
+
+    def _process_class_children(self, cur: Cursor, class_: Class):
         child_namespace = cur.type.spelling
         for ac in cur.get_children():
             if ac.kind == CursorKind.CXX_BASE_SPECIFIER:
                 if ac.access_specifier != cindex.AccessSpecifier.PUBLIC:
                     continue
-
-                if class_.base is not None:
-                    warn(
-                        "Ignore multiple inheritance "
-                        f"'{ac.spelling}' of class '{class_.name}'"
-                    )
-                else:
-                    class_.base = ac.type.spelling
+                class_.bases.add(ac.type.spelling)
             elif ac.kind == CursorKind.CXX_METHOD:
                 self._process_method(ac, class_)
             elif ac.kind == CursorKind.CONSTRUCTOR:
@@ -254,7 +251,6 @@ class ClangParser:
                 self._process_class(ac)
             elif ac.kind in {CursorKind.TYPEDEF_DECL, CursorKind.TYPE_ALIAS_DECL}:
                 self._process_typedef(ac, cur.type.spelling)
-        set_when_missing(self.objects.classes, class_)
 
     def _process_field(self, cur: Cursor, class_: Class):
         var = Variable(

@@ -157,13 +157,37 @@ def test_complex_hierarchy():
     from complexhierarchy import A, B
 
     a = A()
+    a.a, a.b, a.c = 1, 2, 3
+    assert (a.a, a.b, a.c) == (1, 2, 3)
+    assert not hasattr(a, "d")
     assert a.base1_method() == 1
     assert a.base2_method() == 2
     assert a.a_method() == 3
+    
     b = B()
+    b.a, b.b, b.d = 1, 2, 3
+    assert (b.a, b.b, b.d) == (1, 2, 3)
+    assert not hasattr(b, "c")
     assert b.base1_method() == 4
     assert b.base2_method() == 2
     assert b.b_method() == 5
+
+
+@cpp2py_tester("vinheritance.hpp")
+def test_virtual_inheritance():
+    from vinheritance import B, C, D
+
+    b = B(1, 2)
+    assert (b.m_a, b.m_b) == (1, 2)
+    assert b.get_ma() == b.m_a
+
+    c = C(1, 3)
+    assert (c.m_a, c.m_c) == (1, 3)
+    assert c.get_ma() == c.m_a
+
+    d = D(1, 2, 3, 4)
+    assert (d.m_a, d.m_d) == (1, 4)
+    assert d.get_ma() == d.m_a
 
 
 @cpp2py_tester("throwexception.hpp")

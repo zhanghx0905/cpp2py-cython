@@ -113,7 +113,7 @@ class Class(Record):
     fields: list[Variable] = field(default_factory=list)
 
     rtype: RecordType = RecordType.CLASS
-    base: str | None = None
+    bases: set[str] = field(default_factory=set)
     is_abstract: bool = False
     # Whether there is an implicitly generated default constructor
     auto_default_constructible: bool = True

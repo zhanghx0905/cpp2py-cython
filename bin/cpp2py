@@ -28,23 +28,32 @@ def parse_args():
         default=[],
         help="Include directories for clang parser",
     )
-    parser.add_argument(
-        "--verbose", "-v", action="count", default=0, help="verbosity level"
-    )
-    parser.add_argument(
-        "--clear",
-        action="store_true",
-        help="clear intermediate files after building successfully",
-    )
+
     parser.add_argument(
         "--globals",
         type=str,
         default="cvar",
         help="name of the object that holds global variables and litral macros",
     )
-    parser.add_argument("--nobuild", action="store_true")
-    parser.add_argument("--genstub", action="store_true")
-    parser.add_argument("--encoding", type=str, default="utf8")
+    parser.add_argument(
+        "--nobuild",
+        action="store_true",
+        help="only generate code instead of building simultaneously",
+    )
+    parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        help="clear intermediate files after building successfully",
+    )
+    parser.add_argument(
+        "--genstub", action="store_true", help="generate stub file (.pyi)"
+    )
+    parser.add_argument(
+        "--encoding", type=str, default="utf8", help="encoding of input files"
+    )
+    parser.add_argument(
+        "--verbose", "-v", action="count", default=0, help="verbosity level"
+    )
     return parser.parse_args()
 
 
@@ -60,7 +69,7 @@ if __name__ == "__main__":
         encoding=args.encoding,
         verbose=args.verbose,
         build=not args.nobuild,
-        cleanup=args.clear,
+        cleanup=args.cleanup,
         global_vars=args.globals,
         generate_stub=args.genstub,
     )

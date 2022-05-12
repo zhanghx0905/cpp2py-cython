@@ -66,7 +66,7 @@ options:
 - C/C++ class/struct/union are mapped to Cython extension types.
   - Methods/Static Methods are wrapped
   - data members are mapped to Python property with getter and setter (if the field is mutable), static data members are wrapped like global variables 
-  - Single & Public inheritance
+  - Single & Multiple inheritance
   - Abstract class
   - Operator overloading
 - C/C++ functions are mapped to Cython cpdef functions.
