@@ -4,9 +4,9 @@ from typing import List
 
 from clang.cindex import TypeKind
 
-from .config import Imports
+from ..config import Imports
+from ..utils import render
 from .cxxtypes import CXXType, TypeNames
-from .utils import render
 
 
 class AbstractTypeConverter(metaclass=ABCMeta):

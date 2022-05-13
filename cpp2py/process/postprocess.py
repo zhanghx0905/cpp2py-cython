@@ -4,9 +4,9 @@ from functools import partial
 from itertools import chain
 from typing import Callable, List, Optional, Union
 
-from .config import Config, Imports
-from .cxxtypes import TypeNames
-from .generator.func import (
+from ..config import Config, Imports
+from ..typesystem import TypeNames
+from .func import (
     AUTO,
     ConstructorGenerator,
     FunctionGenerator,
@@ -15,8 +15,8 @@ from .generator.func import (
     SetterGenerator,
     StaticMethodGenerator,
 )
-from .parser import Class, Function, Macro, Method, ParseResult, Variable
-from .utils import toposort
+from ..parser import Class, Function, Macro, Method, ParseResult, Variable
+from ..utils import toposort
 
 
 @dataclass

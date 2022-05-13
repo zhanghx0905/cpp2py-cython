@@ -18,7 +18,13 @@ if __name__ == "__main__":
         name="cpp2py",
         version="0.1",
         scripts=[f"bin{os.sep}cpp2py"],
-        packages=["cpp2py", "cpp2py.generator", "cpp2py.parser"],
+        packages=[
+            "cpp2py",
+            "cpp2py.generator",
+            "cpp2py.parser",
+            "cpp2py.process",
+            "cpp2py.typesystem",
+        ],
         package_data={"cpp2py": extra_files},
         requires=["numpy", "cython", "Jinja2"],
     )

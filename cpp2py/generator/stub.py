@@ -1,10 +1,4 @@
-from ..utils import render
 from .impl import BaseImplGenerator
-
-
-def catch_type(literal: object):
-    # .removeprefix("<class '").removesuffix("'>")
-    return str(type(literal))[8:-2]
 
 
 class StubGenerator(BaseImplGenerator):

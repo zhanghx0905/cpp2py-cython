@@ -3,9 +3,8 @@ import re
 from typing import List
 
 from ..config import Imports
-from ..cxxtypes import CXXType, TypeNames
 from ..parser import Variable
-from ..type_conversion import BaseTypeConverter, create_type_converter
+from ..typesystem import BaseTypeConverter, CXXType, TypeNames, create_type_converter
 from ..utils import PostInitMeta, camel_to_snake, render
 
 # member definitions

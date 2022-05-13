@@ -9,7 +9,7 @@ from clang.cindex import Cursor, CursorKind
 from more_itertools import ilen, last, partition, split_at
 
 from ..config import Config, Imports
-from ..cxxtypes import CXXType
+from ..typesystem import CXXType
 from ..utils import remove_namespace
 from .libclang import CLANG_INCDIR
 from .parser_types import (

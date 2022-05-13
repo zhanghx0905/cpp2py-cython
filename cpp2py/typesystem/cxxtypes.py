@@ -5,8 +5,8 @@ from typing import Set
 
 from clang.cindex import Type, TypeKind
 
-from .config import Imports
-from .utils import remove_namespace, removeprefix
+from ..config import Imports
+from ..utils import remove_namespace, removeprefix
 
 _PTR_TYPEKIND = {TypeKind.POINTER, TypeKind.LVALUEREFERENCE, TypeKind.RVALUEREFERENCE}
 

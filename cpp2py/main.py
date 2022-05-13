@@ -8,8 +8,8 @@ import black
 from .config import Config, Imports
 from .generator import DeclGenerator, ImplGenerator, StubGenerator
 from .parser import parse
-from .postprocess import Postprocessor
-from .type_conversion import init_converters
+from .process import Postprocessor
+from .typesystem import init_converters
 from .utils import render, suppress_stdout
 
 

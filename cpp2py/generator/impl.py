@@ -2,7 +2,7 @@ import os
 from typing import Callable
 
 from ..config import Config
-from ..postprocess import ProcessOutput
+from ..process import ProcessOutput
 from ..utils import render
 
 

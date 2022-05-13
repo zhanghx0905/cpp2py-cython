@@ -8,7 +8,7 @@ from keyword import iskeyword
 
 from clang.cindex import CursorKind
 
-from ..cxxtypes import CXXType
+from ..typesystem import CXXType
 from .utils import OPERATORS_MAPPER
 
 
