@@ -52,6 +52,7 @@ class Variable(_BaseSymbol):
 class Function(_BaseSymbol):
     ret_type: CXXType = None
     args: list[Variable] = field(default_factory=list)
+    is_variadic: bool = False  # C variadic parameter like "int printf(char *, ...)"
 
 
 @dataclass

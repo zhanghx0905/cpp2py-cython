@@ -1,6 +1,26 @@
+import os
+
 import numpy
 from Cython.Build import cythonize
 from setuptools import Extension, setup
+
+if os.name == "posix":
+    extra_compile_args = [
+        "-std=c++17",
+        "-O3",
+    ]
+    define_macros = [
+        ("NDEBUG",),
+    ]
+elif os.name == "nt":
+    extra_compile_args = ["/GL", "/std:c++17"]
+    define_macros = []
+
+extra_compile_args.extend([
+{%- for compiler_flag in compiler_flags %}
+    "{{ compiler_flag }}",
+{%- endfor %}
+])
 
 extensions = [
     Extension(
@@ -18,18 +38,8 @@ extensions = [
             "{{ incdir }}",
 {%- endfor %}
         ],
-        define_macros=[
-            ("NDEBUG",),
-            ],
-        extra_compile_args=[
-            "-std=c++17",
-{%- for compiler_flag in compiler_flags %}
-            "{{ compiler_flag }}",
-{%- endfor %}
-            # disable warnings caused by Cython using the deprecated
-            # NumPy C-API
-            "-Wno-cpp", "-Wno-unused-function"
-        ],
+        define_macros=define_macros,
+        extra_compile_args=extra_compile_args,
         library_dirs=[
         {%- for library_dir in library_dirs %}
             "{{ library_dir }}",

@@ -64,8 +64,16 @@ OPERATORS_MAPPER = {
 }
 
 
+def _parse_bool_literal(literal: str):
+    if literal == "true":
+        return True
+    if literal == "false":
+        return False
+    return None
+
+
 @lru_cache
-def parse_literal_digit(literal: str):
+def _parse_literal_digit(literal: str):
     literal = literal.replace("'", "").rstrip("lLfFuU")
     try:
         return literal_eval(literal)
@@ -75,11 +83,11 @@ def parse_literal_digit(literal: str):
 
 
 _LITERAL_HANDLERS: Dict[CursorKind, Callable[[str], Any]] = {
-    CursorKind.INTEGER_LITERAL: parse_literal_digit,
-    CursorKind.FLOATING_LITERAL: parse_literal_digit,
+    CursorKind.INTEGER_LITERAL: _parse_literal_digit,
+    CursorKind.FLOATING_LITERAL: _parse_literal_digit,
     CursorKind.CHARACTER_LITERAL: ord,
     CursorKind.STRING_LITERAL: lambda x: x,
-    CursorKind.CXX_BOOL_LITERAL_EXPR: lambda x: x == "true",
+    CursorKind.CXX_BOOL_LITERAL_EXPR: _parse_bool_literal,
     # CursorKind.CXX_NULL_PTR_LITERAL_EXPR:
 }
 
@@ -88,3 +96,11 @@ def parse_literal_cursor(
     cursor_kind: CursorKind, literal: str
 ) -> Union[int, float, str, bool, None]:
     return _LITERAL_HANDLERS.get(cursor_kind, lambda _: None)(literal)
+
+
+def parse_literal_str(literal: str):
+    for parser in [_parse_literal_digit, _parse_bool_literal]:
+        ret = parser(literal)
+        if ret is not None:
+            return ret
+    return None

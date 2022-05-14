@@ -28,7 +28,7 @@ from .utils import (
     is_operator,
     join_namespace,
     parse_literal_cursor,
-    parse_literal_digit,
+    parse_literal_str,
     split_namespace,
     unary_operators,
 )
@@ -163,6 +163,7 @@ class ClangParser:
             filename=self.get_filename(cur),
             namespace=namespace,
             ret_type=self.build_cxxtype(cur.result_type),
+            is_variadic=cur.type.is_function_variadic(),
         )
         for ac in cur.get_arguments():
             self._process_parameter(ac, func, f"arg{next(arg_counter)}")
@@ -273,6 +274,7 @@ class ClangParser:
             is_const=cur.is_const_method(),
             is_static=cur.is_static_method(),
             is_pure_virtual=cur.is_pure_virtual_method(),
+            is_variadic=cur.type.is_function_variadic(),
         )
 
         for ac in cur.get_arguments():
@@ -319,7 +321,7 @@ class ClangParser:
         tokens = c.get_tokens()
         next(tokens)
         definition = " ".join(i.spelling for i in tokens)
-        literal = parse_literal_digit(definition)
+        literal = parse_literal_str(definition)
         if literal is None:
             return
         m = Macro(name=c.spelling, filename=self.get_filename(c), literal=literal)

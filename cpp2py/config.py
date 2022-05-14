@@ -19,7 +19,7 @@ class Config:
     sources: List[str] = field(default_factory=list)
     libraries: List[str] = field(default_factory=list)
     library_dirs: List[str] = field(default_factory=list)
-    compiler_flags: tuple = ("-O3",)
+    compiler_flags: tuple = ()
 
     # cpp2py behavior conf
     global_vars: str = "cvar"
