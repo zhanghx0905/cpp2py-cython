@@ -20,7 +20,7 @@ def _handle_spcase(arg: Variable, template):
     if "*[" in arg.type.cppname:
         idx = arg.type.cppname.find("*[") + 1
         return f"{arg.type.name[:idx]} {arg.name}{arg.type.name[idx:]}"
-    return template % arg.__dict__
+    return template % {"type": str(arg.type), "name": arg.name, "decl": arg.decl}
 
 
 def _gen_args_decl(func: Function):
@@ -60,7 +60,8 @@ def process_typedef(typedef: Typedef):
 
 def process_function(func: Function):
     return FUNC_DECL % {
-        **func.__dict__,
+        "ret_type": str(func.ret_type),
+        "decl": func.decl,
         "args": _gen_args_decl(func),
     }
 
@@ -81,7 +82,11 @@ def process_class(class_: Class):
     ]
     methods = []
     for method in chain(*class_.methods.values()):
-        mgen = FUNC_DECL % {**method.__dict__, "args": _gen_args_decl(method)}
+        mgen = FUNC_DECL % {
+            "ret_type": str(method.ret_type),
+            "decl": method.decl,
+            "args": _gen_args_decl(method),
+        }
         if method.is_static:
             mgen = f"@staticmethod{os.linesep}{mgen}"
         methods.append(mgen)

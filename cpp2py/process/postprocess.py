@@ -2,7 +2,7 @@ import warnings
 from dataclasses import dataclass, field
 from functools import partial
 from itertools import chain
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Optional, Set, Union
 
 from ..config import Config, Imports
 from ..typesystem import TypeNames
@@ -60,9 +60,34 @@ class Postprocessor:
 
     def generate_output(self):
         self.output = ProcessOutput(self.objects)
+        self._rename_symbols()
         self._handle_inheritance()
         self._bind_generators()
         return self.output
+
+    def _rename_symbols(self):
+        namedict = {}
+        for key, value in self.config.renames_dict.items():
+            if len(key) > 1:
+                key = (key[0], key[1].replace(" ", ""))
+            namedict[key] = value
+
+        def need_renamed(objects: ParseResult):
+            yield from chain(*objects.functions.values())
+            for class_ in objects.classes.values():
+                # yield from class_.ctors
+                yield from chain(*class_.methods.values())
+
+        for func in need_renamed(self.objects):
+            newname = func.name
+            key = (func.fullname,)
+            if key in namedict:
+                newname = namedict[key]
+            else:
+                key = func.fullname, func.type.replace(" ", "")
+                if key in namedict:
+                    newname = namedict[key]
+            func.name = newname
 
     def _handle_inheritance(self):
         """Copies methods/fields from base classes to subclasses."""
@@ -93,18 +118,22 @@ class Postprocessor:
     def _bind_overloaded_functions(
         self, funcs: List[Function], generator_builder: Callable[..., FunctionGenerator]
     ):
-        for idx, func in enumerate(funcs):
+        names: Set[str] = set()
+        ret = []
+        for func in funcs:
+            if func.name in names:
+                warnings.warn(
+                    f"Ignoring overloaded {func.__class__.__name__}: {func.fullname}"
+                )
+                continue
             try:
                 generator = generator_builder(func)
             except NotImplementedError as err:
                 warnings.warn(f"{err} ignoring '{func.fullname}'")
             else:
-                if idx != len(funcs) - 1:
-                    warnings.warn(
-                        f"Ignoring overloaded {func.__class__.__name__}: {func.fullname}"
-                    )
-                return func, generator
-        return None
+                ret.append((func, generator))
+                names.add(func.name)
+        return ret
 
     def _bind_var(self, var: Union[Variable, Macro], class_name: str, is_field: bool):
         if isinstance(var, Macro):
@@ -162,8 +191,8 @@ class Postprocessor:
                     func.name, func.args, func.ret_type, self.typenames, self.includes
                 ),
             )
-            if ret is not None:
-                self.output.functions.append(BindedFunc(*ret))
+            for fun_gen in ret:
+                self.output.functions.append(BindedFunc(*fun_gen))
 
         for class_ in self.objects.classes.values():
             bclass = BindedClass(class_.name)
@@ -172,8 +201,8 @@ class Postprocessor:
             method_builder = partial(self._method_builder, class_name=class_.name)
             for methods in class_.methods.values():
                 ret = self._bind_overloaded_functions(methods, method_builder)
-                if ret is not None:
-                    bclass.methods.append(BindedFunc(*ret))
+                for fun_gen in ret:
+                    bclass.methods.append(BindedFunc(*fun_gen))
 
             # build constructor
             ctors = []
@@ -188,8 +217,8 @@ class Postprocessor:
                     ctor.args, self.typenames, self.includes, class_.name
                 ),
             )
-            if ret is not None:
-                bclass.ctor = BindedFunc(*ret)
+            if ret:
+                bclass.ctor = BindedFunc(*ret[0])
 
             # build fields
             for field in class_.fields:

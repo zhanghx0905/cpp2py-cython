@@ -6,6 +6,7 @@ from cpp2py import (
 )
 from cpp2py.main import run_setup, write_files, make_wrapper
 
+
 class DataConverter(VoidPtrConverter):
     def _matches(self):
         return super()._matches() and self.py_argname == "x"
@@ -25,7 +26,12 @@ class IndexConverter(VoidPtrConverter):
 libdir = "/usr/include/suitesparse"
 headers = [
     os.path.join(libdir, f)
-    for f in ("cholmod.h", "cholmod_core.h", "SuiteSparseQR_C.h", "SuiteSparseQR_definitions.h")
+    for f in (
+        "cholmod.h",
+        "cholmod_core.h",
+        "SuiteSparseQR_C.h",
+        "SuiteSparseQR_definitions.h",
+    )
 ]
 
 config = Config(
@@ -86,13 +92,12 @@ cpdef suite_sparse_qr_c_qr(int ordering, double tol, long econ, cholmod_sparse_s
 
 config.additional_impls = additional_impl
 
+
 def build():
     ret = make_wrapper(config)
     ret.header_content = re.sub(r'".+\.h"', '"SuiteSparseQR_C.h"', ret.header_content)
     write_files(ret)
     run_setup()
-
-
 
 
 if __name__ == "__main__":

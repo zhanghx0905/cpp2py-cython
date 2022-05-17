@@ -1,7 +1,7 @@
 import os
 import re
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -24,6 +24,7 @@ class Config:
     # cpp2py behavior conf
     global_vars: str = "cvar"
     registered_converters: List[type] = field(default_factory=list)
+    renames_dict: Dict[Tuple[str, str], str] = field(default_factory=dict)
     additional_decls: str = ""
     additional_impls: str = ""
 

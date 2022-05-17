@@ -30,6 +30,16 @@ def test_voidptr():
     run()
 
 
+@cpp2py_tester("cppnamespaces.hpp")
+def test_namespaces():
+    from cppnamespaces import fact, Vector
+
+    assert fact(4) == 24
+    v = Vector()
+    v.x = 10
+    assert v.x == 10
+
+
 @cpp2py_tester("abstractclass.hpp")
 def test_abstract_class():
     from abstractclass import AbstractClass, DerivedClass
@@ -163,7 +173,7 @@ def test_complex_hierarchy():
     assert a.base1_method() == 1
     assert a.base2_method() == 2
     assert a.a_method() == 3
-    
+
     b = B()
     b.a, b.b, b.d = 1, 2, 3
     assert (b.a, b.b, b.d) == (1, 2, 3)
@@ -235,3 +245,26 @@ def test_global_vars_macros():
         cvar.PI = 4
     with pytest.raises(AttributeError):
         cvar.T = True
+
+
+def test_renames_dict():
+    config = Config(
+        renames_dict={
+            ("plusOne", "double(double)"): "plus_one_double",
+            ("plusOne", "int (int)"): "plus_one_int",
+            ("A::plusOne", "double(double)"): "plus_one_double",
+            ("A::plusOne", "int(int )"): "plus_one_int",
+        }
+    )
+
+    @cpp2py_tester("overload.hpp", modulename="namesdict", config=config)
+    def run():
+        from namesdict import A, plus_one_int, plus_one_double
+
+        a = A()
+        assert a.plus_one_double(3.0) == 4.0
+        assert a.plus_one_int(3.0) == 2.0
+        assert plus_one_int(3.0) == 2.0
+        assert plus_one_double(3.0) == 4.0
+
+    run()

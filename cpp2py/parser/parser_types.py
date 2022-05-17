@@ -17,20 +17,25 @@ class _BaseSymbol:
     name: str
     filename: str = ""
     namespace: str = ""
+    old_name: str = ""
+
+    @property
+    def decl(self):
+        if self.name == self.old_name:
+            return self.name
+        return f'{self.name} "{self.old_name}"'
 
     def __post_init__(self):
+        self.old_name = self.name
         if iskeyword(self.name):
-            self.decl = f' _{self.name} "{self.name}"'
             self.name = f"_{self.name}"
-        else:
-            self.decl = self.name
 
     @cached_property
     def fullname(self) -> str:
         """name with namespace"""
         if self.namespace == "":
-            return self.name
-        return f"{self.namespace}::{self.name}"
+            return self.old_name
+        return f"{self.namespace}::{self.old_name}"
 
 
 @dataclass
@@ -50,6 +55,7 @@ class Variable(_BaseSymbol):
 
 @dataclass
 class Function(_BaseSymbol):
+    type: str = ""
     ret_type: CXXType = None
     args: list[Variable] = field(default_factory=list)
     is_variadic: bool = False  # C variadic parameter like "int printf(char *, ...)"
@@ -66,14 +72,14 @@ class Method(Function):
         super().__post_init__()
         if (pyname := OPERATORS_MAPPER.get(self.name, None)) is not None:
             self.is_operator = True
-            self.decl = f'{pyname} "{self.name}"'
             self.name = pyname
 
 
 @dataclass
 class Record(_BaseSymbol):
     def __post_init__(self):
-        if iskeyword(self.name):
+        super().__post_init__()
+        if iskeyword(self.old_name):
             raise NotImplementedError("Unsupported: type name collide with keywords")
 
 

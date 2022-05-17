@@ -109,7 +109,7 @@ import ai1
 
 - `void*` can be handled once the underlying type is specified
 - `const` and left reference `&` qualifier will be ignored
-- Only the **first wrappable** one of the overloaded functions will be forwarding.
+- Only the **first wrappable** one of the overloaded functions will be forwarding. However, overloaded functions and methods can be handled by the `renames_dict` field in config.
 - Only one of the identifiers with the same name from different namespaces will be wrapped.
 
 See [examples](./examples) and [testcases](./test/testcases) for more information.

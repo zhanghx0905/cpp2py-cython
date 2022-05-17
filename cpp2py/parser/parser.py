@@ -162,6 +162,7 @@ class ClangParser:
             name=cur.spelling,
             filename=self.get_filename(cur),
             namespace=namespace,
+            type=cur.type.spelling,
             ret_type=self.build_cxxtype(cur.result_type),
             is_variadic=cur.type.is_function_variadic(),
         )
@@ -221,9 +222,9 @@ class ClangParser:
                     continue
                 class_.bases.add(ac.type.spelling)
             elif ac.kind == CursorKind.CXX_METHOD:
-                self._process_method(ac, class_)
+                self._process_method(ac, class_, child_namespace)
             elif ac.kind == CursorKind.CONSTRUCTOR:
-                self._process_ctor(ac, class_)
+                self._process_ctor(ac, class_, child_namespace)
             elif ac.kind == CursorKind.FIELD_DECL:
                 if (
                     ac.access_specifier != cindex.AccessSpecifier.PUBLIC
@@ -261,7 +262,7 @@ class ClangParser:
         )
         class_.fields.append(var)
 
-    def _process_method(self, cur: Cursor, class_: Class):
+    def _process_method(self, cur: Cursor, class_: Class, namespace: str):
         if is_ignored_method(cur):
             return
         if is_operator(cur.spelling) and cur.spelling not in OPERATORS_MAPPER:
@@ -270,6 +271,8 @@ class ClangParser:
         arg_counter = count()
         func = Method(
             name=cur.spelling,
+            namespace=namespace,
+            type=cur.type.spelling,
             ret_type=self.build_cxxtype(cur.result_type),
             is_const=cur.is_const_method(),
             is_static=cur.is_static_method(),
@@ -281,7 +284,7 @@ class ClangParser:
             self._process_parameter(ac, func, f"arg{next(arg_counter)}")
         class_.methods[func.name].append(func)
 
-    def _process_ctor(self, cur: Cursor, class_: Class):
+    def _process_ctor(self, cur: Cursor, class_: Class, namespace: str):
         if not cur.is_default_constructor():
             # has constructor other than default constructor
             class_.auto_default_constructible = False
@@ -296,6 +299,7 @@ class ClangParser:
         arg_counter = count()
         func = Method(
             name=cur.spelling,
+            namespace=namespace,
             ret_type=self.build_cxxtype(cur.result_type),
         )
 

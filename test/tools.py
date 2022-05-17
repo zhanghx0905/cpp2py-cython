@@ -61,7 +61,7 @@ def cpp2py_tester(
                     "sources": full_path(sources),
                     "compiler_flags": ("-O0",),
                     "setup_filename": SETUPPY_NAME,
-                    "generate_stub": False,  # True,
+                    "generate_stub": True,
                 }
             )
             _config = Config(**args)
@@ -80,6 +80,7 @@ def cpp2py_tester(
                         results.source_name,
                         results.header_name,
                         results.setup_name,
+                        results.stub_name,
                         results.source_name.replace(".pyx", ".cpp"),
                         results.source_name.replace(".pyx", ".*.so"),
                     ]

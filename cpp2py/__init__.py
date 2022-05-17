@@ -1,5 +1,6 @@
 from .config import Config
 from .main import make_cython_extention
+from .parser import ClangError
 from .typesystem import AbstractTypeConverter, VoidPtrConverter
 
 __all__ = [
@@ -7,4 +8,5 @@ __all__ = [
     "Config",
     "AbstractTypeConverter",
     "VoidPtrConverter",
+    "ClangError",
 ]

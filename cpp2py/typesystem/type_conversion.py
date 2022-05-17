@@ -42,7 +42,6 @@ class AbstractTypeConverter(metaclass=ABCMeta):
     def _matches(self) -> bool:
         """Is the type converter applicable to the type?"""
 
-    @abstractmethod
     def _add_includes(self, includes: Imports):
         """Add includes for this conversion."""
 
@@ -77,9 +76,6 @@ class BaseTypeConverter(AbstractTypeConverter):
 
     def _matches(self) -> bool:
         return False
-
-    def _add_includes(self, includes: Imports):
-        """do nothing"""
 
     def input_type_decl(self):
         return self.cxxtype.name

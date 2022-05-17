@@ -2,6 +2,7 @@ build
 __pycache__
 .pytest_cache
 .mypy_cache
+.coverage
 *.so
 *.egg-info
 dist
