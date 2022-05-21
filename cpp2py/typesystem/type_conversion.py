@@ -287,7 +287,7 @@ class ClassConverter(BaseTypeConverter):
         includes.mods["malloc"] = True
 
     def cpp_call_arg(self):
-        return f"deref({self.py_argname}.thisptr)"
+        return f"deref(<cpp.{self.cxxtype.plain_name} *> {self.py_argname}.thisptr)"
 
     def return_output(self, cpp_call: str, **kwargs) -> str:
         return render("convert_class", name=self.cxxtype.plain_name, cpp_call=cpp_call)
@@ -308,7 +308,7 @@ class ClassPtrConverter(BaseTypeConverter):
         )
 
     def cpp_call_arg(self):
-        return f"{self.py_argname}.thisptr"
+        return f"<cpp.{self.pointee.plain_name} *>{self.py_argname}.thisptr"
 
     def return_output(self, cpp_call: str, **kwargs) -> str:
         return render(

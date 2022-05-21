@@ -112,8 +112,8 @@ class Postprocessor:
                         leaf_class.fields.append(field)
 
         for tset in toposets:
-            for leaf_class_name in tset:
-                _copy_from_supers(class_dict[leaf_class_name])
+            for class_name in tset:
+                _copy_from_supers(class_dict[class_name])
 
     def _bind_overloaded_functions(
         self, funcs: List[Function], generator_builder: Callable[..., FunctionGenerator]

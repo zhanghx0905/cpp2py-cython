@@ -2,11 +2,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from enum import Enum as pyEnum
 from functools import cached_property
 from keyword import iskeyword
-
-from clang.cindex import CursorKind
 
 from ..typesystem import CXXType
 from .utils import OPERATORS_MAPPER
@@ -83,26 +80,6 @@ class Record(_BaseSymbol):
             raise NotImplementedError("Unsupported: type name collide with keywords")
 
 
-class RecordType(pyEnum):
-    CLASS = 0
-    STRUCT = 1
-    # ENUM = 2
-    UNION = 3
-
-    def __str__(self) -> str:
-        return self.name.lower()
-
-    @classmethod
-    def build(cls, kind: CursorKind):
-        if kind == CursorKind.CLASS_DECL:
-            return cls.CLASS
-        if kind == CursorKind.STRUCT_DECL:
-            return cls.STRUCT
-        if kind == CursorKind.UNION_DECL:
-            return cls.UNION
-        raise NotImplementedError()
-
-
 @dataclass
 class Typedef(Record):
     underlying_type: str = ""
@@ -119,7 +96,6 @@ class Class(Record):
     ctors: list[Method] = field(default_factory=list)
     fields: list[Variable] = field(default_factory=list)
 
-    rtype: RecordType = RecordType.CLASS
     bases: set[str] = field(default_factory=set)
     is_abstract: bool = False
     # Whether there is an implicitly generated default constructor

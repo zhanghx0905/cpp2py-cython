@@ -19,7 +19,6 @@ from .parser_types import (
     Macro,
     Method,
     ParseResult,
-    RecordType,
     Typedef,
     Variable,
 )
@@ -208,7 +207,6 @@ class ClangParser:
             name=class_name,
             filename=self.get_filename(cur),
             namespace=class_namespace,
-            rtype=RecordType.build(cur.kind),
             is_abstract=cur.is_abstract_record(),
         )
         self._process_class_children(cur, class_)
