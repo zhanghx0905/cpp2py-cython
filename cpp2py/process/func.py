@@ -51,6 +51,7 @@ class FunctionGenerator(metaclass=PostInitMeta):
 
         self.name = name
         self.args = args
+        self.typenames = typenames
 
         self.arg_converters = [get_converter(arg.type, arg.name) for arg in args]
         if ret_type == VOID:
@@ -72,7 +73,10 @@ class FunctionGenerator(metaclass=PostInitMeta):
         return "cpdef"
 
     def _input_args(self):
-        args = [f"{tc.input_type_decl()} {tc.py_argname}" for tc in self.arg_converters]
+        args = [
+            f"{self.typenames.get_fused_name(tc.input_type_decl())} {tc.py_argname}"
+            for tc in self.arg_converters
+        ]
         # handle default values
         for idx in reversed(range(len(args))):
             arg = self.args[idx]

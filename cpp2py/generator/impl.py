@@ -9,7 +9,7 @@ from ..utils import render
 class BaseImplGenerator:
     def __init__(self, process_ret: ProcessOutput, config: Config) -> None:
         self.config = config
-
+        self.typenames = process_ret.typenames
         self.enums = process_ret.objects.enums.values()
         self.vars = process_ret.vars
         self.classes = process_ret.classes
@@ -70,8 +70,19 @@ class ImplGenerator(BaseImplGenerator):
         globals, functions, classes = super()._generate_func_class(
             lambda generator: getattr(generator, "impl")
         )
+        fused_derives = os.linesep.join(
+            self.render(
+                "fused_derives",
+                name=class_name,
+                derived=derived,
+                fused_name=self.typenames.get_fused_name(class_name),
+            )
+            for class_name, derived in self.typenames.derives.items()
+        )
+
         return self.render(
             "definitions",
+            annexes=fused_derives,
             globals=globals,
             enums=enums,
             functions=functions,

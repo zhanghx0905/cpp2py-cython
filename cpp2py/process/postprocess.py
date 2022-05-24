@@ -4,8 +4,12 @@ from functools import partial
 from itertools import chain
 from typing import Callable, List, Optional, Set, Union
 
+from more_itertools import flatten
+
 from ..config import Config, Imports
+from ..parser import Class, Function, Macro, Method, ParseResult, Variable
 from ..typesystem import TypeNames
+from ..utils import toposort
 from .func import (
     AUTO,
     ConstructorGenerator,
@@ -15,8 +19,6 @@ from .func import (
     SetterGenerator,
     StaticMethodGenerator,
 )
-from ..parser import Class, Function, Macro, Method, ParseResult, Variable
-from ..utils import toposort
 
 
 @dataclass
@@ -43,6 +45,7 @@ class BindedClass:
 @dataclass
 class ProcessOutput:
     objects: ParseResult
+    typenames: TypeNames
     vars: List[BindedVar] = field(default_factory=list)
     classes: List[BindedClass] = field(default_factory=list)
     # functions remove overloaded
@@ -59,7 +62,7 @@ class Postprocessor:
         self.config = config
 
     def generate_output(self):
-        self.output = ProcessOutput(self.objects)
+        self.output = ProcessOutput(self.objects, self.typenames)
         self._rename_symbols()
         self._handle_inheritance()
         self._bind_generators()
@@ -91,29 +94,36 @@ class Postprocessor:
 
     def _handle_inheritance(self):
         """Copies methods/fields from base classes to subclasses."""
-        class_dict = {node.fullname: node for node in self.objects.classes.values()}
+        class_dict = {node.name: node for node in self.objects.classes.values()}
         dep_map = {
-            class_.fullname: {class_dict[name].fullname for name in class_.bases}
+            class_.name: {class_dict[name].name for name in class_.bases}
             for class_ in self.objects.classes.values()
         }
-        toposets = toposort(dep_map)
+        topoorders = list(toposort(dep_map))
 
-        def _copy_from_supers(leaf_class: Class):
-            supers = dep_map[leaf_class.fullname]
+        def _copy_from_supers(class_: Class):
+            """copy methods and fields from base to subclass"""
+            supers = dep_map[class_.name]
             for superclass_name in supers:
                 superclass = class_dict[superclass_name]
                 for method_name, methods in superclass.methods.items():
-                    if method_name not in leaf_class.methods.keys():
-                        # copy the method from base to subclass
-                        leaf_class.methods[method_name].extend(methods)
-                class_fields = {field.name for field in leaf_class.fields}
-                for field in superclass.fields:
-                    if field.name not in class_fields:
-                        leaf_class.fields.append(field)
+                    if method_name not in class_.methods.keys():
+                        class_.methods[method_name].extend(methods)
+                class_fields = {field.name for field in class_.fields}
+                class_.fields.extend(
+                    field
+                    for field in superclass.fields
+                    if field.name not in class_fields
+                )
 
-        for tset in toposets:
-            for class_name in tset:
-                _copy_from_supers(class_dict[class_name])
+        for class_name in flatten(topoorders):
+            _copy_from_supers(class_dict[class_name])
+
+        for class_name in flatten(reversed(topoorders)):
+            for superclass_name in dep_map[class_name]:
+                derives = self.typenames.derives[superclass_name]
+                derives.add(class_name)
+                derives |= self.typenames.derives.get(class_name, set())
 
     def _bind_overloaded_functions(
         self, funcs: List[Function], generator_builder: Callable[..., FunctionGenerator]

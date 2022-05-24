@@ -1,7 +1,7 @@
 from __future__ import annotations
+from collections import defaultdict
 
 from dataclasses import dataclass, field
-from typing import Set
 
 from clang.cindex import Type, TypeKind
 
@@ -92,5 +92,12 @@ class CXXType:
 
 @dataclass
 class TypeNames:
-    classes: Set[str]
-    enums: Set[str]
+    classes: set[str]
+    enums: set[str]
+
+    derives: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
+
+    def get_fused_name(self, class_name: str) -> str:
+        if class_name in self.derives:
+            return f"_Derived{class_name}"
+        return class_name

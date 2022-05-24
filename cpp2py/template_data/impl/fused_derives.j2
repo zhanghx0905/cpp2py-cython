@@ -1,0 +1,5 @@
+ctypedef fused {{ fused_name }}:
+    {{ name }}
+{%- for derived_class in derived %}
+    {{ derived_class }}
+{%- endfor %}

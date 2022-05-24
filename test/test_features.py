@@ -268,3 +268,14 @@ def test_renames_dict():
         assert plus_one_double(3.0) == 4.0
 
     run()
+
+
+@cpp2py_tester("polymorphism.hpp")
+def test_polymorphism():
+    from polymorphism import get_area, get_perimeter, Circle, Square
+
+    c = Circle(4)
+    s = Square(size=3)
+
+    assert get_area(c) == c.area()
+    assert get_perimeter(s) == s.perimeter()

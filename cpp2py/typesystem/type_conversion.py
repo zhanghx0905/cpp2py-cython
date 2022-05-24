@@ -332,17 +332,24 @@ class ClassPtrPtrConverter(BaseTypeConverter):
             and self.cxxtype.pointee.kind == TypeKind.POINTER
         ):
             self.pointee = self.cxxtype.pointee.pointee
+            self.typename = self.pointee.plain_name
             return self.pointee.plain_name in self.classnames
         return False
 
+    def python_to_cpp(self):
+        return (
+            f"cdef cpp.{self.typename} * {self.cpp_argname} "
+            f"= <cpp.{self.typename} *>{self.py_argname}.thisptr"
+        )
+
     def cpp_call_arg(self):
-        return f"&{self.py_argname}.thisptr"
+        return f"&{self.cpp_argname}"
 
     def input_type_decl(self):
-        return self.pointee.plain_name
+        return self.typename
 
     def pysign_type_decl(self, is_parameter: bool):
-        return self.pointee.plain_name
+        return self.typename
 
     def return_output(self, cpp_call: str, **kwargs) -> str:
         raise NotImplementedError
