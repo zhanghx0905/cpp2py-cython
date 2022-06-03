@@ -26,7 +26,7 @@ Then this tool is for you.
 
 ## Usage
 
-Detailed documentation is available [here]() (in Chinese, as part of my bachelor thesis).
+Detailed documentation is available [here](./doc/doc.pdf) (in Chinese, as part of my bachelor thesis).
 
 You can call this tool in cmd:
 
