@@ -8,10 +8,6 @@ Point* getPoint(
     const int N, 
     const int* top, 
     const int* _board, 
-    const int lastX, 
-    const int lastY, 
-    const int noX, 
-    const int noY
 );
 ```
 
@@ -23,16 +19,16 @@ def get_point(
     N: np.int32,
     top: np.ndarray[Any, np.dtype[np.int32]],
     _board: np.ndarray[Any, np.dtype[np.int32]],
-    lastX: np.int32,
-    lastY: np.int32,
-    noX: np.int32,
-    noY: np.int32,
 ) -> Point: ...
 ```
 
 Then this tool is for you.
 
 ## Usage
+
+Detailed documentation is available [here]() (in Chinese, as part of my bachelor thesis).
+
+You can call this tool in cmd:
 
 ```
 usage: cpp2py [-h] [--sources [SOURCES [SOURCES ...]]] [--modname [MODNAME]] [--outdir [OUTDIR]] [--incdirs [INCDIRS [INCDIRS ...]]]
@@ -57,40 +53,29 @@ optional arguments:
   --encoding ENCODING   encoding of input files
   --verbose, -v         verbosity leve
 ```
-Or use Python API:
+or in Python API:
 
 ```python
 from cpp2py import make_cython_extention, Config
 
 make_cython_extention(
-    Config(
-        headers=["src1/Point.h", "src1/Strategy.h"],
-        modulename="ai1",
-        sources=[
-            "src1/board.cpp",
-            "src1/Judge.cpp",
-            "src1/Strategy.cpp",
-            "src1/uct.cpp",
-        ],
-        encoding="gbk",
-    )
+    Config(...)
 )
-
-import ai1
 ```
+See [examples](./examples) and [testcases](./test/testcases) for more information.
+
 ## Features
 
 - Global vars and literal macros are wrapped in the `cvar` object.
-- C/C++ enums are mapped to Python enums (enum.Enum).
+- C/C++ enums are mapped to Python enums (`cpdef enum`).
 - C/C++ class/struct/union are mapped to Cython extension types.
   - Methods/Static Methods are wrapped
-  - data members are mapped to Python property with getter and setter (if the field is mutable), static data members are wrapped like global variables 
+  - data members are mapped to Python property, static data members are wrapped like global variables 
   - Single & Multiple inheritance
   - Abstract class
   - Operator overloading
-- C/C++ functions are mapped to Cython cpdef functions.
-  - default values (only number/string literals)
-- Generate the corresponding Python stub file (.pyi)
+- C/C++ functions are mapped to Cython `cpdef` functions.
+
 
 | Python type =>   | *C++ type*                                                   | => Python type                 |
 | :--------------- | :----------------------------------------------------------- | :----------------------------- |
@@ -103,16 +88,17 @@ import ai1
 | class            | class/struct/union's pointer                                 | class                          |
 | class            | pointer of class/struct/union's pointer                      | ×                              |
 | str              | char *, std::string                                          | str                            |
-| Iterable[str]    | char**                                                       | ×                              |
+| Iterable[str]    | char**                                                       | str                            |
 | Mapping/Iterable | std::vector, std::list, std::set, std::unordered_set, std::map, std::unordered_map, std::pair (only with str or numeric types) | set, list, dict, tuple         |
 | complex          | std::complex                                                 | complex                        |
 
-- `void*` can be handled once the underlying type is specified
-- `const` and left reference `&` qualifier will be ignored
+  - default values (only number/string literals)
+  - `void*` can be handled once the underlying type is specified
+  - `const` and left reference `&` qualifier will be ignored
+- Generate the corresponding Python stub file (.pyi)
+
 - Only the **first wrappable** one of the overloaded functions will be forwarding. However, overloaded functions and methods can be handled by the `renames_dict` field in config.
 - Only one of the identifiers with the same name from different namespaces will be wrapped.
-
-See [examples](./examples) and [testcases](./test/testcases) for more information.
 
 ### Unsupported
 
@@ -134,7 +120,7 @@ pip install .
 
 ## Test
 ```shell
-LD_LIBRARY_PATH=. pytest test
+pytest test
 ```
 
 ## Reference
