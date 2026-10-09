@@ -18,43 +18,43 @@ elif os.name == "nt":
 
 extra_compile_args.extend([
 {%- for compiler_flag in compiler_flags %}
-    "{{ compiler_flag }}",
+    {{ compiler_flag|tojson }},
 {%- endfor %}
 ])
 
 extensions = [
     Extension(
-        "{{ module }}",
+        {{ module|tojson }},
         [
-            "{{ module }}.pyx",
+            {{ (module ~ ".pyx")|tojson }},
 {%- for filename in filenames %}
-            "{{ filename }}",
+            {{ filename|tojson }},
 {%- endfor %}
         ],
         include_dirs=[
-            "{{ sourcedir }}",
+            {{ sourcedir|tojson }},
             numpy.get_include(),
 {%- for incdir in incdirs %}
-            "{{ incdir }}",
+            {{ incdir|tojson }},
 {%- endfor %}
         ],
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         library_dirs=[
         {%- for library_dir in library_dirs %}
-            "{{ library_dir }}",
+            {{ library_dir|tojson }},
         {%- endfor %}
         ],
         libraries=[
         {%- for library in libraries %}
-            "{{ library }}",
+            {{ library|tojson }},
         {%- endfor %}
         ],
         language="c++"
     )
 ]
 setup(
-    name="{{ module }}",
+    name={{ module|tojson }},
     ext_modules=cythonize(extensions,
                           language_level=3,
                           compiler_directives={

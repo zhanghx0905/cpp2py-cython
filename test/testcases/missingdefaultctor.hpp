@@ -1,4 +1,4 @@
-/* CE: C++ class must have a nullary constructor to be stack allocated */
+// By-value return from a class with a private default constructor.
 class MyClassA {
     MyClassA() { }
 

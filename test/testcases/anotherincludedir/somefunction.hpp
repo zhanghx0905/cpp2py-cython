@@ -1,4 +1,1 @@
-double square(double d)
-{
-    return d * d;
-}
+double square(double d);

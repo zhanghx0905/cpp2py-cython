@@ -1,4 +1,10 @@
-cdef {{ name }} obj = {{ name }}.__new__({{ name }})
-obj.thisptr = <cpp.{{ name }} *>{{ cpp_call }}
-obj.owner = {{ copy }}
-return obj
+cdef {{ name }} {{ object_name }} = {{ name }}.__new__({{ name }})
+cdef cpp.{{ name }} * {{ result_name }} = <cpp.{{ name }} *>{{ cpp_call }}
+if {{ result_name }} == NULL:
+    return None
+{{ object_name }}.thisptr = {{ result_name }}
+{{ object_name }}.owner = {{ copy }}
+{% if not copy -%}
+{{ object_name }}._keepalive = {{ keepalive }}
+{% endif -%}
+return {{ object_name }}

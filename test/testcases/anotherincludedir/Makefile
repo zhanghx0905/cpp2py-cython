@@ -1,8 +1,8 @@
 CXX := c++
 LIBNAME := libmylib.so
 
-$(LIBNAME):
-	$(CXX) somefunction.cpp -shared -o $(LIBNAME)
+$(LIBNAME): somefunction.cpp somefunction.hpp
+	$(CXX) somefunction.cpp -fPIC -shared -o $(LIBNAME)
 
 clean:
 	rm $(LIBNAME)

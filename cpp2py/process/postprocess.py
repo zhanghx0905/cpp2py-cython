@@ -95,16 +95,23 @@ class Postprocessor:
     def _handle_inheritance(self):
         """Copies methods/fields from base classes to subclasses."""
         class_dict = {node.name: node for node in self.objects.classes.values()}
-        dep_map = {
-            class_.name: {class_dict[name].name for name in class_.bases}
-            for class_ in self.objects.classes.values()
-        }
-        topoorders = list(toposort(dep_map))
+        by_fullname = {node.fullname: node for node in self.objects.classes.values()}
+        dep_map = {}
+        for class_ in self.objects.classes.values():
+            missing = class_.bases - by_fullname.keys()
+            if missing:
+                raise ValueError(
+                    f"Cannot wrap {class_.fullname}: base declarations are missing: "
+                    + ", ".join(sorted(missing))
+                    + ". Include their headers in Config.headers."
+                )
+            dep_map[class_.name] = {by_fullname[name].name for name in class_.bases}
+        topoorders = [sorted(group) for group in toposort(dep_map)]
 
         def _copy_from_supers(class_: Class):
             """copy methods and fields from base to subclass"""
             supers = dep_map[class_.name]
-            for superclass_name in supers:
+            for superclass_name in sorted(supers):
                 superclass = class_dict[superclass_name]
                 for method_name, methods in superclass.methods.items():
                     if method_name not in class_.methods.keys():
@@ -120,7 +127,7 @@ class Postprocessor:
             _copy_from_supers(class_dict[class_name])
 
         for class_name in flatten(reversed(topoorders)):
-            for superclass_name in dep_map[class_name]:
+            for superclass_name in sorted(dep_map[class_name]):
                 derives = self.typenames.derives[superclass_name]
                 derives.add(class_name)
                 derives |= self.typenames.derives.get(class_name, set())
@@ -184,6 +191,12 @@ class Postprocessor:
             self.typenames,
             self.includes,
             class_name,
+            self._return_policy(m),
+        )
+
+    def _return_policy(self, func: Function):
+        return self.config.return_policies.get(
+            func.fullname, self.config.pointer_return_policy
         )
 
     def _bind_generators(self):
@@ -198,7 +211,12 @@ class Postprocessor:
             ret = self._bind_overloaded_functions(
                 funcs,
                 lambda func: FunctionGenerator(
-                    func.name, func.args, func.ret_type, self.typenames, self.includes
+                    func.name,
+                    func.args,
+                    func.ret_type,
+                    self.typenames,
+                    self.includes,
+                    self._return_policy(func),
                 ),
             )
             for fun_gen in ret:

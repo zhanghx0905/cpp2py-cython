@@ -28,7 +28,9 @@ Then this tool is for you.
 
 Detailed documentation is available [here](./doc/doc.pdf) (in Chinese, as part of my bachelor thesis).
 
-You can call this tool in cmd:
+For current setup, compilerless development, and pointer ownership migration, see [the development guide](./doc/development.md).
+
+You can call this tool from the command line (`cpp2py` or `python -m cpp2py`):
 
 ```
 usage: cpp2py [-h] [--sources [SOURCES [SOURCES ...]]] [--modname [MODNAME]] [--outdir [OUTDIR]] [--incdirs [INCDIRS [INCDIRS ...]]]
@@ -92,7 +94,7 @@ See [examples](./examples) and [testcases](./test/testcases) for more informatio
 | Mapping/Iterable | std::vector, std::list, std::set, std::unordered_set, std::map, std::unordered_map, std::pair (only with str or numeric types) | set, list, dict, tuple         |
 | complex          | std::complex                                                 | complex                        |
 
-  - default values (only number/string literals)
+  - default values (number/string/character/bool literals)
   - `void*` can be handled once the underlying type is specified
   - `const` and left reference `&` qualifier will be ignored
 - Generate the corresponding Python stub file (.pyi)
@@ -108,19 +110,27 @@ See [examples](./examples) and [testcases](./test/testcases) for more informatio
 - C function pointer
 
 ## Install
-Ubuntu 20.04
+**Python 3.9 or newer**
 
-**Python 3.8 or newer**
-
-```shell
-sudo apt install python3-pip libclang-12-dev
-pip install -r requirement.txt
-pip install .
+```powershell
+python -X utf8 -m venv .venv
+& .\.venv\Scripts\python.exe -X utf8 -m pip install .
 ```
 
+The `libclang` dependency supplies a prebuilt parser library on Windows/Linux/macOS. Do not install both `clang` and `libclang` Python distributions in the same environment. Use `--nobuild` / `Config(build=False)` to generate sources without a C++ compiler. Parsing headers that include the STL or a platform SDK still needs those real headers. Compiling a Python extension needs a C++ compiler and the corresponding SDK.
+
+Raw class pointer returns now default to borrowed ownership. Configure `return_policies={"namespace::factory": "owned"}` for APIs that transfer objects allocated with C++ `new`. See the development guide before migrating existing integrations.
+
 ## Test
-```shell
-pytest test
+```powershell
+python -m pip install -r requirements_dev.txt
+python -m pytest
+```
+
+The default suite checks parsing, generated Cython, and packaging without a C++ compiler. On a machine with the required native dependencies:
+
+```powershell
+python -m pytest test -m integration
 ```
 
 ## Reference

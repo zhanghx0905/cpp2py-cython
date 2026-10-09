@@ -14,6 +14,7 @@ class Config:
     incdirs: List[str] = field(default_factory=list)
     encoding: str = "utf8"
     libclang_flags: tuple = ()
+    libclang_library: Optional[str] = None
 
     # cython conf
     sources: List[str] = field(default_factory=list)
@@ -27,6 +28,9 @@ class Config:
     renames_dict: Dict[Tuple[str, str], str] = field(default_factory=dict)
     additional_decls: str = ""
     additional_impls: str = ""
+    # Use "owned" only for pointers allocated by C++ new and transferred to Python.
+    pointer_return_policy: str = "borrowed"
+    return_policies: Dict[str, str] = field(default_factory=dict)
 
     build: bool = True
     cleanup: bool = True

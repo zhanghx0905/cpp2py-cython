@@ -2,6 +2,8 @@ import pytest
 
 from tools import cpp2py_tester
 
+pytestmark = pytest.mark.integration
+
 
 @cpp2py_tester("overload.hpp", warnmsg="Ignoring overloaded .*")
 def test_overloading_is_not_possible():
@@ -49,11 +51,15 @@ def test_name_clash():
 
 @cpp2py_tester("missingdefaultctor.hpp")
 def test_missing_default_ctor():
-    with pytest.raises(ImportError):
-        import missingdefaultctor
+    from missingdefaultctor import MyClassA, factory
+
+    assert isinstance(factory(), MyClassA)
 
 
 @cpp2py_tester("missingassignmentop.hpp")
 def test_missing_assignment():
-    with pytest.raises(ImportError):
-        import missingassignmentop
+    from missingassignmentop import MyClassA, factory
+
+    value = factory()
+    assert isinstance(value, MyClassA)
+    assert value.value == 5

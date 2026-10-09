@@ -121,14 +121,23 @@ NUMERIC_TYPEKINDS = {
     TypeKind.ULONG: "np.uint64",
     TypeKind.ULONGLONG: "np.uint64",
     TypeKind.CHAR_S: "np.int8",
+    TypeKind.SCHAR: "np.int8",
     TypeKind.SHORT: "np.int16",
     TypeKind.INT: "np.int32",
     TypeKind.LONG: "np.int64",
     TypeKind.LONGLONG: "np.int64",
     TypeKind.FLOAT: "np.float32",
     TypeKind.DOUBLE: "np.float64",
-    TypeKind.LONGDOUBLE: "np.float128",
+    TypeKind.LONGDOUBLE: "np.longdouble",
 }
+
+
+def _numeric_typing(cxxtype):
+    if cxxtype.kind in {TypeKind.LONG, TypeKind.ULONG}:
+        bits = cxxtype.type.get_size() * 8
+        prefix = "int" if cxxtype.kind == TypeKind.LONG else "uint"
+        return f"np.{prefix}{bits}"
+    return NUMERIC_TYPEKINDS[cxxtype.kind]
 
 
 class NumericConverter(BaseTypeConverter):
@@ -136,7 +145,7 @@ class NumericConverter(BaseTypeConverter):
         return self.cxxtype.kind in NUMERIC_TYPEKINDS
 
     def pysign_type_decl(self, is_parameter: bool):
-        return NUMERIC_TYPEKINDS[self.cxxtype.kind]
+        return _numeric_typing(self.cxxtype)
 
 
 class CStringConverter(BaseTypeConverter):
@@ -167,14 +176,19 @@ class CStringArrayConverter(BaseTypeConverter):
         )
 
     def _add_includes(self, includes):
-        includes.mods["malloc"] = True
+        includes.add_stl("std::vector")
 
     def python_to_cpp(self):
-        return f"""cdef char** {self.cpp_argname} = <char **>malloc(sizeof(char *)*len({self.py_argname}))
-cdef unsigned int {self.py_argname}_idx
-for {self.py_argname}_idx in range(len({self.py_argname})):
-    {self.cpp_argname}[{self.py_argname}_idx] = {self.py_argname}[{self.py_argname}_idx]
-"""
+        # Keep encoded bytes alive and let a C++ vector release the pointer
+        # array automatically, including when conversion or the call raises.
+        return f"""cdef list {self.cpp_argname}_strings = [s if isinstance(s, bytes) else s.encode('utf8') for s in {self.py_argname}]
+cdef vector[char*] {self.cpp_argname}_pointers = []
+cdef bytes {self.cpp_argname}_string
+cdef char** {self.cpp_argname} = NULL
+for {self.cpp_argname}_string in {self.cpp_argname}_strings:
+    {self.cpp_argname}_pointers.push_back({self.cpp_argname}_string)
+if {self.cpp_argname}_pointers.size() > 0:
+    {self.cpp_argname} = &{self.cpp_argname}_pointers[0]"""
 
     def input_type_decl(self):
         return "object"
@@ -239,19 +253,23 @@ class NumericPtrConverter(BaseTypeConverter):
         includes.mods["deref"] = True
 
     def input_type_decl(self):
-        return f"{self.pointee.name}[:]"
+        return f"{self.pointee.name}[::1]"
+
+    def python_to_cpp(self):
+        return f"if {self.py_argname} is None or {self.py_argname}.shape[0] == 0:\n    raise ValueError('{self.py_argname} must be a nonempty contiguous buffer')"
 
     def cpp_call_arg(self):
         return f"&{self.py_argname}[0]"
 
     def return_output(self, cpp_call: str, **kwargs) -> str:
-        return f"return deref({cpp_call})"
+        result = kwargs.get("result_name", "_cpp2py_result")
+        return f"cdef {self.cxxtype.name} {result} = {cpp_call}\nif {result} == NULL:\n    return None\nreturn deref({result})"
 
     def pysign_type_decl(self, is_parameter: bool):
-        pointee_typing = NUMERIC_TYPEKINDS[self.pointee.kind]
+        pointee_typing = _numeric_typing(self.pointee)
         if is_parameter:
             return f"np.ndarray[Any, np.dtype[{pointee_typing}]]"
-        return pointee_typing
+        return f"Optional[{pointee_typing}]"
 
 
 class VoidPtrConverter(BaseTypeConverter):
@@ -265,13 +283,17 @@ class VoidPtrConverter(BaseTypeConverter):
         includes.mods["deref"] = True
 
     def input_type_decl(self):
-        return f"{self.real_type()}[:]"
+        return f"{self.real_type()}[::1]"
+
+    def python_to_cpp(self):
+        return NumericPtrConverter.python_to_cpp(self)
 
     def cpp_call_arg(self):
         return f"<void *>&{self.py_argname}[0]"
 
     def return_output(self, cpp_call: str, **kwargs) -> str:
-        return f"return deref(<{self.real_type()} *> {cpp_call})"
+        result = kwargs.get("result_name", "_cpp2py_result")
+        return f"cdef {self.real_type()} * {result} = <{self.real_type()} *> {cpp_call}\nif {result} == NULL:\n    return None\nreturn deref({result})"
 
     @abstractmethod
     def real_type(self) -> str:
@@ -284,13 +306,20 @@ class ClassConverter(BaseTypeConverter):
 
     def _add_includes(self, includes):
         includes.mods["deref"] = True
-        includes.mods["malloc"] = True
+
+    def python_to_cpp(self):
+        return f"if {self.py_argname} is None or {self.py_argname}.thisptr == NULL:\n    raise ValueError('{self.py_argname} must be an initialized C++ object')"
 
     def cpp_call_arg(self):
         return f"deref(<cpp.{self.cxxtype.plain_name} *> {self.py_argname}.thisptr)"
 
     def return_output(self, cpp_call: str, **kwargs) -> str:
-        return render("convert_class", name=self.cxxtype.plain_name, cpp_call=cpp_call)
+        return render(
+            "convert_class",
+            name=self.cxxtype.plain_name,
+            cpp_call=cpp_call,
+            object_name=kwargs.get("object_name", "_cpp2py_object"),
+        )
 
     def input_type_decl(self):
         return self.cxxtype.plain_name
@@ -310,11 +339,17 @@ class ClassPtrConverter(BaseTypeConverter):
     def cpp_call_arg(self):
         return f"<cpp.{self.pointee.plain_name} *>{self.py_argname}.thisptr"
 
+    def python_to_cpp(self):
+        return ClassConverter.python_to_cpp(self)
+
     def return_output(self, cpp_call: str, **kwargs) -> str:
         return render(
             "convert_class_ptr",
             name=self.pointee.plain_name,
             copy=kwargs["copy"],
+            keepalive=kwargs.get("keepalive", "None"),
+            result_name=kwargs.get("result_name", "_cpp2py_result"),
+            object_name=kwargs.get("object_name", "_cpp2py_object"),
             cpp_call=cpp_call,
         )
 
@@ -322,7 +357,9 @@ class ClassPtrConverter(BaseTypeConverter):
         return self.pointee.plain_name
 
     def pysign_type_decl(self, is_parameter: bool):
-        return self.pointee.plain_name
+        if is_parameter:
+            return self.pointee.plain_name
+        return f"Optional[{self.pointee.plain_name}]"
 
 
 class ClassPtrPtrConverter(BaseTypeConverter):

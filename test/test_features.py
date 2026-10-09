@@ -4,6 +4,8 @@ from cpp2py import Config, VoidPtrConverter
 
 from tools import cpp2py_tester
 
+pytestmark = pytest.mark.integration
+
 
 @cpp2py_tester(["deppart1.hpp", "deppart2.hpp"], modulename="depcombined")
 def test_dependent_parts():
@@ -40,7 +42,15 @@ def test_namespaces():
     assert v.x == 10
 
 
-@cpp2py_tester("abstractclass.hpp")
+@cpp2py_tester(
+    "abstractclass.hpp",
+    config=Config(
+        return_policies={
+            "AbstractClass::clone": "owned",
+            "DerivedClass::clone": "owned",
+        }
+    ),
+)
 def test_abstract_class():
     from abstractclass import AbstractClass, DerivedClass
 

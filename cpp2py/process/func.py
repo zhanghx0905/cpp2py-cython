@@ -22,8 +22,7 @@ AUTO = object()
 
 
 class _VoidConverter(BaseTypeConverter):
-    def __init__(self):
-        ...
+    def __init__(self): ...
 
     def return_output(self, cpp_call: str, **kwargs) -> str:
         return cpp_call
@@ -33,8 +32,7 @@ class _VoidConverter(BaseTypeConverter):
 
 
 class _AutoConverter(BaseTypeConverter):
-    def __init__(self):
-        ...
+    def __init__(self): ...
 
 
 class FunctionGenerator(metaclass=PostInitMeta):
@@ -45,6 +43,7 @@ class FunctionGenerator(metaclass=PostInitMeta):
         ret_type: CXXType,
         typenames: TypeNames,
         includes: Imports,
+        return_policy: str = "borrowed",
     ) -> None:
         def get_converter(type: CXXType, py_argname: str):
             return create_type_converter(type, py_argname, typenames, includes)
@@ -52,6 +51,20 @@ class FunctionGenerator(metaclass=PostInitMeta):
         self.name = name
         self.args = args
         self.typenames = typenames
+        self.return_policy = return_policy
+        reserved = {arg.name for arg in args} | {"self"}
+
+        def temporary_name(base):
+            name = base
+            while name in reserved:
+                name += "_"
+            reserved.add(name)
+            return name
+
+        self.return_names = {
+            "result_name": temporary_name("_cpp2py_result"),
+            "object_name": temporary_name("_cpp2py_object"),
+        }
 
         self.arg_converters = [get_converter(arg.type, arg.name) for arg in args]
         if ret_type == VOID:
@@ -82,7 +95,7 @@ class FunctionGenerator(metaclass=PostInitMeta):
             arg = self.args[idx]
             if arg.value is None:
                 break
-            args[idx] += f" = {arg.value}"
+            args[idx] += f" = {arg.value!r}"
         return ", ".join(args)
 
     def _cpp_call(self, args: str):
@@ -92,7 +105,9 @@ class FunctionGenerator(metaclass=PostInitMeta):
         }
 
     def generate_impl(self):
-        input_conversions = [tc.python_to_cpp() for tc in self.arg_converters]
+        input_conversions = [self._call_checks()] + [
+            tc.python_to_cpp() for tc in self.arg_converters
+        ]
         cpp_call_args = ", ".join(tc.cpp_call_arg() for tc in self.arg_converters)
         cpp_call = self._cpp_call(cpp_call_args)
 
@@ -104,10 +119,20 @@ class FunctionGenerator(metaclass=PostInitMeta):
                 "args": self._input_args(),
                 "input_conversions": input_conversions,
                 "return_output": self.ret_converter.return_output(
-                    cpp_call, copy=self.ret_copy
+                    cpp_call,
+                    copy=self.ret_copy and self.return_policy == "owned",
+                    keepalive=self._return_keepalive(),
+                    **self.return_names,
                 ),
             },
         )
+
+    def _call_checks(self):
+        return ""
+
+    def _return_keepalive(self):
+        args = [tc.py_argname for tc in self.arg_converters]
+        return "(" + ", ".join(args) + ",)" if args else "None"
 
     def _pysign_input_args(self):
         args = [
@@ -119,7 +144,7 @@ class FunctionGenerator(metaclass=PostInitMeta):
             arg = self.args[idx]
             if arg.value is None:
                 break
-            args[idx] += f" = {arg.value}"
+            args[idx] += f" = {arg.value!r}"
         return ", ".join(args)
 
     def generate_pysign(self):
@@ -142,10 +167,17 @@ class MethodGenerator(FunctionGenerator):
         typenames: TypeNames,
         includes: Imports,
         class_name: str,
+        return_policy: str = "borrowed",
     ) -> None:
-        super().__init__(name, args, ret_type, typenames, includes)
+        super().__init__(name, args, ret_type, typenames, includes, return_policy)
         self.class_name = class_name
         self.is_operator = _MAGIC_METHOD_PATTERN.match(name) is not None
+
+    def _call_checks(self):
+        return "if self.thisptr == NULL:\n    raise ValueError('C++ object is not initialized')"
+
+    def _return_keepalive(self):
+        return "self"
 
     def _function_prefix(self):
         return "def" if self.is_operator else "cpdef"
@@ -167,6 +199,12 @@ class MethodGenerator(FunctionGenerator):
 
 
 class StaticMethodGenerator(MethodGenerator):
+    def _call_checks(self):
+        return ""
+
+    def _return_keepalive(self):
+        return FunctionGenerator._return_keepalive(self)
+
     def _function_prefix(self):
         return "def"
 
@@ -203,6 +241,9 @@ class ConstructorGenerator(MethodGenerator):
     def _function_prefix(self):
         return "def"
 
+    def _call_checks(self):
+        return "if self.thisptr != NULL:\n    raise ValueError('C++ object is already initialized')"
+
     def _cpp_call(self, args: str):
         return CONSTRUCTOR_CALL % {
             "class_name": self.class_name,
@@ -223,6 +264,12 @@ class GetterGenerator(MethodGenerator):
         super().__init__(field_name, [], field_type, typenames, includes, class_name)
         self.ret_copy = False
         self.prefix = prefix
+
+    def _call_checks(self):
+        return super()._call_checks() if self.prefix == "self.thisptr" else ""
+
+    def _return_keepalive(self):
+        return "self" if self.prefix == "self.thisptr" else "None"
 
     def _function_prefix(self):
         return "def"
@@ -256,6 +303,9 @@ class SetterGenerator(MethodGenerator):
             class_name,
         )
         self.prefix = prefix
+
+    def _call_checks(self):
+        return super()._call_checks() if self.prefix == "self.thisptr" else ""
 
     def _function_prefix(self):
         return "def"

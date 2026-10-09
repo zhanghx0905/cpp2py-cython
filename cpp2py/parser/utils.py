@@ -72,11 +72,48 @@ def _parse_bool_literal(literal: str):
     return None
 
 
-@lru_cache
-def _parse_literal_digit(literal: str):
-    literal = literal.replace("'", "").rstrip("lLfFuU")
+def _parse_string_literal(literal: str):
     try:
         return literal_eval(literal)
+    except (ValueError, SyntaxError):
+        return None
+
+
+def _parse_character_literal(literal: str):
+    value = _parse_string_literal(literal)
+    return ord(value) if isinstance(value, str) and len(value) == 1 else None
+
+
+@lru_cache
+def _parse_literal_digit(literal: str):
+    # Hexadecimal digits can end in F, so stripping all suffix characters
+    # corrupts values such as 0xFF. String contents must also remain intact.
+    if literal.startswith('"'):
+        return _parse_string_literal(literal)
+    if literal.startswith("'"):
+        return _parse_character_literal(literal)
+    numeric = literal.replace("'", "").replace(" ", "")
+    integer = re.fullmatch(
+        r"([+-]?(?:0[xX][0-9a-fA-F]+|0[bB][01]+|[0-9]+))([uUlL]*)", numeric
+    )
+    if integer:
+        digits = integer.group(1)
+        unsigned = digits.lstrip("+-")
+        base = (
+            0
+            if unsigned.lower().startswith(("0x", "0b"))
+            else 8 if len(unsigned) > 1 and unsigned.startswith("0") else 10
+        )
+        try:
+            return int(digits, base)
+        except ValueError:
+            return None
+    numeric = numeric.rstrip("fFlL")
+    try:
+        if numeric.lower().startswith("0x") and "p" in numeric.lower():
+            return float.fromhex(numeric)
+        value = literal_eval(numeric)
+        return value if isinstance(value, (int, float)) else None
     except (ValueError, SyntaxError):
         ...
     return None
@@ -85,8 +122,8 @@ def _parse_literal_digit(literal: str):
 _LITERAL_HANDLERS: Dict[CursorKind, Callable[[str], Any]] = {
     CursorKind.INTEGER_LITERAL: _parse_literal_digit,
     CursorKind.FLOATING_LITERAL: _parse_literal_digit,
-    CursorKind.CHARACTER_LITERAL: ord,
-    CursorKind.STRING_LITERAL: lambda x: x,
+    CursorKind.CHARACTER_LITERAL: _parse_character_literal,
+    CursorKind.STRING_LITERAL: _parse_string_literal,
     CursorKind.CXX_BOOL_LITERAL_EXPR: _parse_bool_literal,
     # CursorKind.CXX_NULL_PTR_LITERAL_EXPR:
 }

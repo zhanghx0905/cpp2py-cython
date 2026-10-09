@@ -74,7 +74,7 @@ class ImplGenerator(BaseImplGenerator):
             self.render(
                 "fused_derives",
                 name=class_name,
-                derived=derived,
+                derived=sorted(derived),
                 fused_name=self.typenames.get_fused_name(class_name),
             )
             for class_name, derived in self.typenames.derives.items()

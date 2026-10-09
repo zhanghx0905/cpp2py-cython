@@ -3,6 +3,8 @@ import pytest
 
 from tools import cpp2py_tester
 
+pytestmark = pytest.mark.integration
+
 
 @cpp2py_tester("basictypes.hpp")
 def test_basic_types():

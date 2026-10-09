@@ -25,6 +25,7 @@ except ImportError:
                 "src1/uct.cpp",
             ],
             encoding="gbk",
+            return_policies={"getPoint": "owned"},
         )
     )
 
@@ -37,6 +38,7 @@ except ImportError:
             ["src2/Point.h", "src2/Strategy.h"],
             "ai2",
             incdirs=["src2"],
+            return_policies={"getPoint": "owned"},
             sources=[
                 "src2/AI_Engine.cpp",
                 "src2/Judge.cpp",

@@ -6,12 +6,12 @@ from warnings import warn
 
 from clang import cindex
 from clang.cindex import Cursor, CursorKind
-from more_itertools import ilen, last, partition, split_at
+from more_itertools import ilen, partition, split_at
 
 from ..config import Config, Imports
 from ..typesystem import CXXType
 from ..utils import remove_namespace
-from .libclang import CLANG_INCDIR
+from .libclang import create_index, resource_include_dirs
 from .parser_types import (
     Class,
     Enum,
@@ -52,18 +52,20 @@ def _check_diagnostics(diagnostics: List[cindex.Diagnostic]):
 
 def is_ignored_method(cur: Cursor):
     """unpublic or deleted method"""
-    return (
-        cur.access_specifier != cindex.AccessSpecifier.PUBLIC
-        or last(cur.get_tokens(), "") == "delete"
+    tokens = [token.spelling for token in cur.get_tokens()]
+    return cur.access_specifier != cindex.AccessSpecifier.PUBLIC or any(
+        tokens[i : i + 2] == ["=", "delete"] for i in range(len(tokens) - 1)
     )
 
 
 def set_when_missing(dic: dict, symbol):
     if symbol.name in dic:
-        warn(
-            f"Ignoring {symbol.__class__.__name__} {dic[symbol.name].fullname} "
-            f"for name conflicts with {symbol.fullname}."
-        )
+        if dic[symbol.name].fullname != symbol.fullname:
+            warn(
+                f"Ignoring {symbol.__class__.__name__} {symbol.fullname} "
+                f"for name conflicts with {dic[symbol.name].fullname}."
+            )
+        return
     dic[symbol.name] = symbol
 
 
@@ -78,14 +80,17 @@ class ClangParser:
         self.cxxtypes: Dict[str, CXXType] = {}
 
     def get_filename(self, cur: Cursor):
-        return self.fmapper[cur.location.file.name]
+        return self.fmapper[_file_key(cur.location.file.name)]
 
     def build_cxxtype(self, type: cindex.Type):
         return CXXType.build(type, self.includes, self.cxxtypes)
 
     def parse(self):
         for ac in self.root_cursor.walk_preorder():
-            if ac.location.file is None or ac.location.file.name not in self.fmapper:
+            if (
+                ac.location.file is None
+                or _file_key(ac.location.file.name) not in self.fmapper
+            ):
                 continue
             if ac.kind == CursorKind.MACRO_DEFINITION:
                 self._process_macro(ac)
@@ -96,7 +101,7 @@ class ClangParser:
         for cur in cursor.get_children():
             if (
                 cur.location.file is not None
-                and cur.location.file.name not in self.fmapper
+                and _file_key(cur.location.file.name) not in self.fmapper
             ):
                 continue
             if cur.kind == CursorKind.UNEXPOSED_DECL:  # extern "C" {}
@@ -107,16 +112,16 @@ class ClangParser:
             elif cur.kind == CursorKind.FUNCTION_DECL:
                 self._process_function(cur, namespace)
             elif cur.kind == CursorKind.ENUM_DECL:
-                if cur.is_anonymous():
-                    return
+                if cur.is_anonymous() or not cur.is_definition():
+                    continue
                 self._process_enum(cur)
             elif cur.kind in {
                 CursorKind.CLASS_DECL,
                 CursorKind.STRUCT_DECL,
                 CursorKind.UNION_DECL,
             }:
-                if cur.is_anonymous():
-                    return
+                if cur.is_anonymous() or not cur.is_definition():
+                    continue
                 self._process_class(cur)
             elif cur.kind in {CursorKind.TYPEDEF_DECL, CursorKind.TYPE_ALIAS_DECL}:
                 self._process_typedef(cur, namespace)
@@ -218,7 +223,9 @@ class ClangParser:
             if ac.kind == CursorKind.CXX_BASE_SPECIFIER:
                 if ac.access_specifier != cindex.AccessSpecifier.PUBLIC:
                     continue
-                class_.bases.add(ac.type.spelling)
+                # A base specifier may use an unqualified spelling inside a
+                # namespace; its declaration has the same spelling as our class record.
+                class_.bases.add(ac.type.get_declaration().type.spelling)
             elif ac.kind == CursorKind.CXX_METHOD:
                 self._process_method(ac, class_, child_namespace)
             elif ac.kind == CursorKind.CONSTRUCTOR:
@@ -330,27 +337,36 @@ class ClangParser:
         set_when_missing(self.objects.macros, m)
 
 
+def _file_key(filename):
+    return os.path.normcase(os.path.abspath(filename))
+
+
 def parse(config: Config, includes: Imports):
+    idx = create_index(config.libclang_library)
     args = [
+        "-x",
+        "c++",
+        "-std=c++17",
         "-Wno-pragma-once-outside-header",
-        f"-I{CLANG_INCDIR}",
+        *[f"-I{include}" for include in resource_include_dirs()],
         *[f"-I{include}" for include in config.incdirs],
         *[flag for flag in config.libclang_flags],
     ]
 
-    headers = [path.split(os.sep)[-1] for path in config.headers]
-    dummy_name = "./__dummy.cxx"
-    dummy_content = os.linesep.join(f'#include "{h}"' for h in headers)
-    # https://stackoverflow.com/questions/60311504/clang-cindex-cant-find-header-in-unsaved-files
-    headers = [f"./{h}" for h in headers]
-    headers_mapper = dict(zip(headers, config.headers))
+    headers = list(
+        dict.fromkeys(
+            os.path.abspath(path).replace("\\", "/") for path in config.headers
+        )
+    )
+    dummy_name = os.path.abspath("__cpp2py_input__.cpp")
+    dummy_content = os.linesep.join(f'#include "{header}"' for header in headers)
+    headers_mapper = {_file_key(path): path for path in headers}
 
     unsaved_files = [[dummy_name, dummy_content]]
-    for header, path in headers_mapper.items():
+    for path in headers:
         with open(path, encoding=config.encoding) as f:
-            unsaved_files.append([header, f.read()])
+            unsaved_files.append([path, f.read()])
 
-    idx = cindex.Index.create()
     root = idx.parse(
         path=dummy_name,
         args=args,

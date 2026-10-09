@@ -3,9 +3,9 @@ import re
 from contextlib import contextmanager
 from functools import lru_cache, partial, reduce
 from typing import Dict
+from importlib.resources import files
 
 from jinja2 import Template
-from pkg_resources import resource_filename
 
 _NAMESPACE_PATTERN = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*::")
 _CAMEL_PATTERN = re.compile(r"(?<=[a-z])[A-Z]|(?<!^)[A-Z](?=[a-z])")
@@ -34,9 +34,8 @@ suppress_stdout = partial(_suppress_stream, 1)
 
 
 def render(template: str, **kwargs) -> str:
-    filename = resource_filename("cpp2py", f"template_data/{template}.j2")
-    with open(filename, encoding="utf8") as f:
-        j2template = Template(f.read())
+    filename = files("cpp2py").joinpath("template_data", f"{template}.j2")
+    j2template = Template(filename.read_text(encoding="utf8"))
     return j2template.render(**kwargs)
 
 

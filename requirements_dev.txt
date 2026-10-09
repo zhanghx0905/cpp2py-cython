@@ -1,7 +1,5 @@
 -r requirements.txt
 
-pytest==7.1.0
-coverage==6.3.3
-pylint==2.13.7
-mypy==0.942
-flake8==4.0.1
+pytest>=7,<10
+build>=1,<2
+wheel>=0.40

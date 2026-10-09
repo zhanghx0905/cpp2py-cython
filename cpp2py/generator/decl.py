@@ -66,7 +66,7 @@ def process_function(func: Function):
     }
 
 
-_MACRO_TYPES = {int: "int", str: "const char *", float: "double"}
+_MACRO_TYPES = {bool: "bool", int: "int", str: "const char *", float: "double"}
 
 
 def process_macro(macro: Macro):
@@ -80,6 +80,10 @@ def process_class(class_: Class):
         CONSTRUCTOR_DECL % {"class_name": class_.name, "args": _gen_args_decl(ctor)}
         for ctor in class_.ctors
     ]
+    if not ctors and class_.auto_default_constructible and not class_.is_abstract:
+        ctors.append(f"{class_.name}() except +")
+    # Cython must know the copy constructor to wrap a by-value return.
+    ctors.append(f"{class_.name}(const {class_.name}&) except +")
     methods = []
     for method in chain(*class_.methods.values()):
         mgen = FUNC_DECL % {

@@ -7,6 +7,8 @@ from numpy.testing import assert_array_equal
 
 from tools import cpp2py_tester
 
+pytestmark = pytest.mark.integration
+
 EIGEN3_INCDIR = "/usr/include/eigen3"
 
 

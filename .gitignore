@@ -8,3 +8,6 @@ __pycache__
 dist
 .vscode
 venv
+.venv
+generated
+*.pyd
